@@ -11,6 +11,67 @@ import { BUILDING_CONFIG } from '@/data/buildings';
 
 function rng(): number { return Math.random(); }
 
+export interface AwardShowDef {
+  id: string;
+  name: string;
+  emoji: string;
+  prestige: number;
+  nominationsWeek: number;
+  ceremonyWeek: number;
+  categories: { id: string; name: string; genres: Genre[] }[];
+}
+
+export const AWARD_SHOWS: AwardShowDef[] = [
+  {
+    id: 'keystones', name: 'The Keystones', emoji: '🏆', prestige: 1.5,
+    nominationsWeek: 40, ceremonyWeek: 48,
+    categories: [
+      { id: 'ks-drama', name: 'Best Drama Series', genres: ['drama', 'crime'] as Genre[] },
+      { id: 'ks-comedy', name: 'Best Comedy Series', genres: ['comedy', 'talk-show', 'late-night'] as Genre[] },
+      { id: 'ks-limited', name: 'Best Limited Series', genres: ['limited-series', 'anthology', 'documentary'] as Genre[] },
+      { id: 'ks-genre', name: 'Best Genre Series', genres: ['sci-fi', 'fantasy', 'horror', 'action'] as Genre[] },
+      { id: 'ks-reality', name: 'Best Reality / Unscripted', genres: ['reality'] as Genre[] },
+      { id: 'ks-writing', name: 'Outstanding Writing', genres: [] as Genre[] },
+      { id: 'ks-direction', name: 'Outstanding Direction', genres: [] as Genre[] },
+      { id: 'ks-perf-drama', name: 'Best Lead Performance (Drama)', genres: ['drama', 'crime', 'limited-series'] as Genre[] },
+      { id: 'ks-perf-comedy', name: 'Best Lead Performance (Comedy)', genres: ['comedy', 'talk-show', 'late-night'] as Genre[] },
+    ],
+  },
+  {
+    id: 'aureates', name: 'The Aureates', emoji: '🥇', prestige: 1.1,
+    nominationsWeek: 2, ceremonyWeek: 6,
+    categories: [
+      { id: 'au-drama', name: 'Best Drama', genres: ['drama', 'crime'] as Genre[] },
+      { id: 'au-comedy', name: 'Best Comedy or Musical', genres: ['comedy', 'talk-show', 'late-night'] as Genre[] },
+      { id: 'au-series', name: 'Best Series — Any Genre', genres: [] as Genre[] },
+      { id: 'au-limited', name: 'Best Limited or Anthology', genres: ['limited-series', 'anthology'] as Genre[] },
+      { id: 'au-performance', name: 'Best Performance', genres: [] as Genre[] },
+      { id: 'au-breakthrough', name: 'Breakthrough Series', genres: [] as Genre[] },
+    ],
+  },
+  {
+    id: 'britannias', name: 'The Britannias', emoji: '🎭', prestige: 1.0,
+    nominationsWeek: 14, ceremonyWeek: 20,
+    categories: [
+      { id: 'br-drama', name: 'Best Drama Series', genres: ['drama', 'crime'] as Genre[] },
+      { id: 'br-comedy', name: 'Best Comedy Series', genres: ['comedy', 'late-night'] as Genre[] },
+      { id: 'br-limited', name: 'Best Mini-Series', genres: ['limited-series', 'anthology'] as Genre[] },
+      { id: 'br-doc', name: 'Best Documentary', genres: ['documentary'] as Genre[] },
+      { id: 'br-craft', name: 'Best Craft Achievement', genres: [] as Genre[] },
+    ],
+  },
+  {
+    id: 'critics-verdict', name: "Critics' Verdict", emoji: '🖊️', prestige: 0.7,
+    nominationsWeek: 1, ceremonyWeek: 4,
+    categories: [
+      { id: 'cv-show', name: 'Best Show', genres: [] as Genre[] },
+      { id: 'cv-drama', name: 'Best Drama', genres: ['drama', 'crime', 'limited-series'] as Genre[] },
+      { id: 'cv-comedy', name: 'Best Comedy', genres: ['comedy', 'talk-show', 'late-night'] as Genre[] },
+      { id: 'cv-new', name: 'Best New Series', genres: [] as Genre[] },
+    ],
+  },
+];
+
 // ─── critic & audience score helpers ────────────────────────────────────────
 
 // How much critics value each genre by default (prestige bias)
@@ -59,6 +120,18 @@ function uid(): string { return Math.random().toString(36).slice(2, 10); }
 
 export function calcBaseRating(quality: number, networkFit: number, reach: number): number {
   return (quality / 100) * (networkFit / 100) * reach * 12;
+}
+
+export function getEffectiveReach(networkId: string, baseReach: number, modifiers: Record<string, number> = {}): number {
+  const mod = modifiers[networkId] ?? 0;
+  return Math.min(1.0, Math.max(0.1, baseReach + mod));
+}
+
+function calcReachImpact(avgRating: number, baseRating: number, networkType: string): number {
+  const mult = networkType === 'streaming' ? 1.2 : networkType === 'premium' ? 0.8 : 0.4;
+  if (baseRating <= 0) return 0;
+  const ratio = avgRating / baseRating;
+  return Math.max(-0.02, Math.min(0.05, (ratio - 1.0) * 0.04 * mult));
 }
 
 function calcEpisodeRating(prod: ActiveProduction, epIndex: number): number {
@@ -428,6 +501,56 @@ const AWARD_CATEGORIES = [
   { id: 'best-actor-comedy', name: 'Best Lead Performance (Comedy)', genres: ['comedy', 'talk-show', 'late-night'] as Genre[] },
 ];
 
+export function generateNominationsForShow(
+  awardShow: AwardShowDef,
+  activeProds: ActiveProduction[],
+  airedShows: AiredShow[],
+  year: number,
+): AwardNomination[] {
+  const nominations: AwardNomination[] = [];
+  const minQuality = awardShow.prestige >= 1.3 ? 65 : 60;
+
+  const eligibleProds = activeProds.filter(
+    p => (p.status === 'airing' || p.status === 'completed') && p.quality >= minQuality && p.startYear === year,
+  );
+  const eligibleAired = airedShows.filter(s => s.quality >= minQuality);
+
+  const allShows = [
+    ...eligibleProds.map(p => ({ id: p.id, title: p.draft.title, genre: p.draft.genre, quality: p.quality })),
+    ...eligibleAired.slice(-5).map(s => ({ id: s.id, title: s.draft.title, genre: s.draft.genre, quality: s.quality })),
+  ];
+
+  for (const cat of awardShow.categories) {
+    const candidates = cat.genres.length
+      ? allShows.filter(s => (cat.genres as string[]).includes(s.genre))
+      : allShows;
+
+    if (!candidates.length) continue;
+
+    const count = Math.min(candidates.length, 1 + Math.floor(rng() * 2));
+    const sorted = [...candidates].sort((a, b) => b.quality - a.quality).slice(0, count);
+
+    for (const show of sorted) {
+      const threshold = awardShow.prestige >= 1.3 ? 0.85 : awardShow.prestige >= 1.0 ? 0.75 : 0.65;
+      if (rng() < (show.quality / 100) * threshold) {
+        nominations.push({
+          id: uid(),
+          categoryId: cat.id,
+          categoryName: cat.name,
+          showId: show.id,
+          showTitle: show.title,
+          year,
+          isWinner: false,
+          awardShowId: awardShow.id,
+          awardShowName: awardShow.name,
+        });
+      }
+    }
+  }
+
+  return nominations;
+}
+
 export function generateNominations(
   activeProds: ActiveProduction[],
   airedShows: AiredShow[],
@@ -475,22 +598,23 @@ export function generateNominations(
   return nominations;
 }
 
-export function processAwardsCeremony(nominations: AwardNomination[], year: number): AwardNomination[] {
-  const thisYear = nominations.filter(n => n.year === year && !n.isWinner);
+export function processAwardsCeremony(nominations: AwardNomination[], year: number, awardShowId?: string): AwardNomination[] {
+  const thisYear = nominations.filter(n =>
+    n.year === year && !n.isWinner &&
+    (awardShowId ? (n.awardShowId ?? 'keystones') === awardShowId : true)
+  );
   const byCategory = new Map<string, AwardNomination[]>();
 
   for (const nom of thisYear) {
-    if (!byCategory.has(nom.categoryId)) byCategory.set(nom.categoryId, []);
-    byCategory.get(nom.categoryId)!.push(nom);
+    const key = `${nom.awardShowId ?? ''}:${nom.categoryId}`;
+    if (!byCategory.has(key)) byCategory.set(key, []);
+    byCategory.get(key)!.push(nom);
   }
 
   const winnerIds = new Set<string>();
-
   byCategory.forEach((noms) => {
     if (!noms.length) return;
-    // Winner weighted by quality (higher quality = more likely to win)
-    const pick = noms[Math.floor(rng() * noms.length)];
-    winnerIds.add(pick.id);
+    winnerIds.add(noms[Math.floor(rng() * noms.length)].id);
   });
 
   return nominations.map(n => winnerIds.has(n.id) ? { ...n, isWinner: true } : n);
@@ -517,6 +641,16 @@ export function advanceWeek(studio: Studio): WeekResult {
   );
   money -= buildingMaintenance;
   let awardsSeasonYear = studio.awardsSeasonYear;
+  let processedAwardCeremonies = { ...(studio.processedAwardCeremonies ?? {}) };
+  let networkReachModifiers = { ...(studio.networkReachModifiers ?? {}) };
+
+  // Decay reach modifiers 20% at the start of each year
+  if (newWeek === 1) {
+    for (const nid of Object.keys(networkReachModifiers)) {
+      networkReachModifiers[nid] *= 0.8;
+      if (Math.abs(networkReachModifiers[nid]) < 0.005) delete networkReachModifiers[nid];
+    }
+  }
 
   // ── process productions ─────────────────────────────────────────────────
   let activeProductions = studio.activeProductions.map(prod => {
@@ -651,6 +785,20 @@ export function advanceWeek(studio: Studio): WeekResult {
   const stillRunning = activeProductions.filter(p => p.status !== 'completed');
   const newAiredShows = completedNow.map(productionToAiredShow);
 
+  // Apply reach impact from completed productions
+  for (const prod of completedNow) {
+    const network = NETWORKS.find(n => n.id === prod.deal.networkId);
+    if (!network) continue;
+    const avgR = prod.episodeResults.length
+      ? prod.episodeResults.reduce((s, e) => s + e.rating, 0) / prod.episodeResults.length
+      : 0;
+    const impact = calcReachImpact(avgR, prod.baseRating, network.type);
+    if (Math.abs(impact) > 0.001) {
+      const current = networkReachModifiers[network.id] ?? 0;
+      networkReachModifiers[network.id] = Math.max(-0.10, Math.min(0.20, current + impact));
+    }
+  }
+
   // Track the most recently successful show's draft for "Last Known Values" heat map
   const successfulCompleted = completedNow.find(p => {
     if (!p.episodeResults.length) return false;
@@ -659,60 +807,81 @@ export function advanceWeek(studio: Studio): WeekResult {
   });
   const lastSuccessfulDraft = successfulCompleted?.draft ?? studio.lastSuccessfulDraft;
 
-  // ── awards season ────────────────────────────────────────────────────────
+  // ── awards season (multiple named ceremonies) ─────────────────────────────
   let awardNominations = [...studio.awardNominations];
 
-  if (newWeek === 40 && awardsSeasonYear !== newYear) {
-    const noms = generateNominations(
-      activeProductions,
-      [...studio.airedShows, ...newAiredShows],
-      newYear,
-    );
-    if (noms.length) {
-      awardNominations = [...awardNominations, ...noms];
-      reputation += noms.length;
-      newEvents.push({
-        id: uid(),
-        type: 'award-nomination',
-        week: newWeek,
-        year: newYear,
-        headline: `🎬 Awards season: ${noms.length} nomination(s) received!`,
-        description: `Nominated for: ${Array.from(new Set(noms.map(n => n.categoryName))).join(', ')}.`,
-        impact: { reputation: noms.length },
-        isRead: false,
-      });
+  // First pass: generate nominations for shows whose nomination week is now
+  for (const awardShow of AWARD_SHOWS) {
+    const nomKey = `${awardShow.id}:nom`;
+    if (newWeek === awardShow.nominationsWeek && (processedAwardCeremonies[nomKey] ?? 0) < newYear) {
+      const noms = generateNominationsForShow(
+        awardShow,
+        activeProductions,
+        [...studio.airedShows, ...newAiredShows],
+        newYear,
+      );
+      if (noms.length) {
+        awardNominations = [...awardNominations, ...noms];
+        const repGain = Math.round(noms.length * awardShow.prestige);
+        reputation += repGain;
+        newEvents.push({
+          id: uid(),
+          type: 'award-nomination',
+          week: newWeek,
+          year: newYear,
+          headline: `${awardShow.emoji} ${awardShow.name}: ${noms.length} nomination${noms.length > 1 ? 's' : ''}!`,
+          description: `Nominated for: ${Array.from(new Set(noms.map(n => n.categoryName))).join(', ')}.`,
+          impact: { reputation: repGain },
+          isRead: false,
+        });
+      }
+      processedAwardCeremonies = { ...processedAwardCeremonies, [nomKey]: newYear };
     }
-    awardsSeasonYear = newYear;
   }
 
-  if (newWeek === 48 && awardsSeasonYear === newYear) {
-    awardNominations = processAwardsCeremony(awardNominations, newYear);
-    const wins = awardNominations.filter(n => n.year === newYear && n.isWinner);
-    if (wins.length) {
-      const prize = wins.length * 500_000;
-      money += prize;
-      reputation += wins.length * 5;
-      newEvents.push({
-        id: uid(),
-        type: 'award-win',
-        week: newWeek,
-        year: newYear,
-        headline: `🏆 Won ${wins.length} award${wins.length > 1 ? 's' : ''}!`,
-        description: wins.map(w => w.categoryName).join(' · '),
-        impact: { money: prize, reputation: wins.length * 5 },
-        isRead: false,
-      });
-    } else {
-      newEvents.push({
-        id: uid(),
-        type: 'award-nomination',
-        week: newWeek,
-        year: newYear,
-        headline: `Awards ceremony concluded`,
-        description: `Unfortunately, no wins this year. Keep making great shows!`,
-        impact: {},
-        isRead: false,
-      });
+  // Second pass: process ceremonies for shows whose ceremony week is now
+  for (const awardShow of AWARD_SHOWS) {
+    const nomKey = `${awardShow.id}:nom`;
+    const cerKey = `${awardShow.id}:cer`;
+    if (newWeek === awardShow.ceremonyWeek && (processedAwardCeremonies[cerKey] ?? 0) < newYear) {
+      const hasNoms = (processedAwardCeremonies[nomKey] ?? 0) >= newYear ||
+        awardNominations.some(n => n.year === newYear && n.awardShowId === awardShow.id);
+      if (!hasNoms) continue;
+
+      awardNominations = processAwardsCeremony(awardNominations, newYear, awardShow.id);
+      const wins = awardNominations.filter(n => n.year === newYear && n.isWinner && n.awardShowId === awardShow.id);
+
+      if (wins.length) {
+        const prize = Math.round(wins.length * 500_000 * awardShow.prestige);
+        const repGain = Math.round(wins.length * 5 * awardShow.prestige);
+        money += prize;
+        reputation += repGain;
+        newEvents.push({
+          id: uid(),
+          type: 'award-win',
+          week: newWeek,
+          year: newYear,
+          headline: `${awardShow.emoji} ${awardShow.name}: Won ${wins.length} award${wins.length > 1 ? 's' : ''}!`,
+          description: wins.map(w => w.categoryName).join(' · '),
+          impact: { money: prize, reputation: repGain },
+          isRead: false,
+        });
+      } else {
+        const ourNoms = awardNominations.filter(n => n.year === newYear && n.awardShowId === awardShow.id);
+        if (ourNoms.length) {
+          newEvents.push({
+            id: uid(),
+            type: 'award-nomination',
+            week: newWeek,
+            year: newYear,
+            headline: `${awardShow.emoji} ${awardShow.name} ceremony concluded`,
+            description: `No wins this year. Keep making great shows!`,
+            impact: {},
+            isRead: false,
+          });
+        }
+      }
+      processedAwardCeremonies = { ...processedAwardCeremonies, [cerKey]: newYear };
     }
   }
 
@@ -786,6 +955,8 @@ export function advanceWeek(studio: Studio): WeekResult {
     networkSlots: {},
     genrePopularity,
     lastSuccessfulDraft,
+    processedAwardCeremonies,
+    networkReachModifiers,
   };
 
   return { studio: updatedStudio, newEvents };

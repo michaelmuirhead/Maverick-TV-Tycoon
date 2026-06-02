@@ -1,8 +1,9 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { ShowDraft } from '@/types/game';
 import { GENRES, GENRE_PROFILES } from '@/data/genres';
 import { useGameStore } from '@/store/gameStore';
+import { LOGLINE_IDEAS } from '@/data/loglines';
 
 interface Props {
   draft: ShowDraft;
@@ -32,6 +33,49 @@ function genrePopBadge(pop: number): string {
   if (pop >= 72) return '🔥';
   if (pop <= 30) return '📉';
   return '';
+}
+
+function LoglineIdeasButton({ genre, onSelect }: { genre: string; onSelect: (idea: { title: string; logline: string }) => void }) {
+  const [open, setOpen] = useState(false);
+  const ideas = LOGLINE_IDEAS[genre] ?? [];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all ${open ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'}`}
+      >
+        💡 {open ? 'Hide Ideas' : 'Get Ideas'}
+      </button>
+      {open && ideas.length > 0 && (
+        <div className="absolute right-0 top-9 z-20 w-[360px] sm:w-[480px] bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between">
+            <span className="text-xs font-semibold text-zinc-400">Ready-made ideas · click to use</span>
+            <button onClick={() => setOpen(false)} className="text-zinc-600 hover:text-zinc-300 text-xs">✕</button>
+          </div>
+          <div className="overflow-y-auto max-h-80 divide-y divide-zinc-800/60">
+            {ideas.map((idea, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => { onSelect(idea); setOpen(false); }}
+                className="w-full text-left px-4 py-3 hover:bg-zinc-800/60 transition-colors group"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-zinc-200 mb-0.5">{idea.title}</div>
+                    <div className="text-xs text-zinc-500 leading-relaxed">{idea.logline}</div>
+                  </div>
+                  <span className="text-xs text-amber-500 font-semibold flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">Use →</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function BasicInfo({ draft, onUpdate }: Props) {
@@ -70,7 +114,10 @@ export default function BasicInfo({ draft, onUpdate }: Props) {
 
       {/* Logline */}
       <div>
-        <label className="block text-sm font-semibold text-zinc-300 mb-2">Logline</label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-zinc-300">Logline</label>
+          <LoglineIdeasButton genre={draft.genre} onSelect={(idea) => onUpdate({ title: draft.title || idea.title, logline: idea.logline })} />
+        </div>
         <textarea
           value={draft.logline}
           onChange={(e) => onUpdate({ logline: e.target.value })}

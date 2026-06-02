@@ -230,6 +230,8 @@ export interface AwardNomination {
   showTitle: string;
   year: number;
   isWinner: boolean;
+  awardShowId?: string;
+  awardShowName?: string;
 }
 
 export interface RivalShow {
@@ -298,6 +300,8 @@ export interface Studio {
   events: GameEvent[];
   rivalStudios: RivalStudio[];
   awardsSeasonYear: number;
+  processedAwardCeremonies?: Record<string, number>;
+  networkReachModifiers?: Record<string, number>;
   networkSlots: Record<string, number>;
   genrePopularity: Record<string, number>;
   buildings?: StudioBuilding[];
