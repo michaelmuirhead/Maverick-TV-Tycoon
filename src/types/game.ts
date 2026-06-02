@@ -146,6 +146,7 @@ export interface EpisodeResult {
   criticScore?: number;
   audienceScore?: number;
   eventId?: string;
+  wasReshot?: boolean;
 }
 
 export interface ActiveProduction {
@@ -164,6 +165,8 @@ export interface ActiveProduction {
   baseRating: number;
   startWeek: number;
   startYear: number;
+  hypeLevel?: number;
+  marketingSpend?: number;
 }
 
 export interface RenewalOffer {
@@ -180,6 +183,8 @@ export interface RenewalOffer {
   expiresWeek: number;
   expiresYear: number;
   originalDraft: ShowDraft;
+  negotiationState?: 'counter-accepted' | 'counter-rejected';
+  counterPayPerEpisode?: number;
 }
 
 export interface AiredShow {
@@ -280,4 +285,5 @@ export interface Studio {
   genrePopularity: Record<string, number>;
   buildings?: StudioBuilding[];
   talentPool?: { cast: CastMember[]; crew: CrewMember[] };
+  lastSuccessfulDraft?: ShowDraft;
 }

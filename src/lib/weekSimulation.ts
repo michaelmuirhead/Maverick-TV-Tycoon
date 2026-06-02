@@ -62,7 +62,11 @@ export function calcBaseRating(quality: number, networkFit: number, reach: numbe
 }
 
 function calcEpisodeRating(prod: ActiveProduction, epIndex: number): number {
-  const base = prod.baseRating * (1 + prod.ratingsModifier);
+  // Hype decays across the season — strongest at premiere, gone by finale
+  const hypeDecay = Math.max(0, 1 - epIndex / (prod.totalEpisodes + 1));
+  const hypeBoost = ((prod.hypeLevel ?? 0) / 100) * 0.25 * hypeDecay;
+
+  const base = prod.baseRating * (1 + prod.ratingsModifier) * (1 + hypeBoost);
 
   // Series build factor: quality shows build audience, weak shows drop off
   const fraction = epIndex / prod.totalEpisodes;
@@ -595,6 +599,14 @@ export function advanceWeek(studio: Studio): WeekResult {
   const stillRunning = activeProductions.filter(p => p.status !== 'completed');
   const newAiredShows = completedNow.map(productionToAiredShow);
 
+  // Track the most recently successful show's draft for "Last Known Values" heat map
+  const successfulCompleted = completedNow.find(p => {
+    if (!p.episodeResults.length) return false;
+    const avgR = p.episodeResults.reduce((s, e) => s + e.rating, 0) / p.episodeResults.length;
+    return avgR >= p.baseRating * 0.95 && p.quality >= 65;
+  });
+  const lastSuccessfulDraft = successfulCompleted?.draft ?? studio.lastSuccessfulDraft;
+
   // ── awards season ────────────────────────────────────────────────────────
   let awardNominations = [...studio.awardNominations];
 
@@ -721,6 +733,7 @@ export function advanceWeek(studio: Studio): WeekResult {
     awardsSeasonYear,
     networkSlots: {},
     genrePopularity,
+    lastSuccessfulDraft,
   };
 
   return { studio: updatedStudio, newEvents };

@@ -114,8 +114,79 @@ export function calcShowQuality(
   const postQ = calcPostProductionQuality(draft, buildingBonuses?.postProduction ?? 0);
   const creativeQ = calcCreativeGenreFit(draft);
 
-  const quality = castQ * 0.30 + prodQ * 0.22 + postQ * 0.18 + creativeQ * 0.30;
+  let quality = castQ * 0.30 + prodQ * 0.22 + postQ * 0.18 + creativeQ * 0.30;
+
+  // Creative genius: exceptional genre fit gives a non-linear bonus (up to +10 pts at perfect fit)
+  if (creativeQ >= 80) quality += (creativeQ - 80) * 0.5;
+
   return Math.round(clamp(quality, 0, 100));
+}
+
+export interface HeatMapCell {
+  key: string;
+  label: string;
+  value: number;
+  idealLo: number;
+  idealHi: number;
+  fit: number;
+  isPerfect: boolean;
+}
+
+export interface HeatMapSection {
+  title: string;
+  emoji: string;
+  avgFit: number;
+  cells: HeatMapCell[];
+}
+
+export function getCreativeFitHeatMap(draft: ShowDraft): HeatMapSection[] {
+  const profile = GENRE_PROFILES[draft.genre];
+
+  function cell(key: string, label: string, value: number, range: [number, number]): HeatMapCell {
+    const f = fitScore(value, range);
+    return { key, label, value, idealLo: range[0], idealHi: range[1], fit: Math.round(f), isPerfect: f >= 95 };
+  }
+
+  function sectionAvg(cells: HeatMapCell[]) {
+    return Math.round(cells.reduce((s, c) => s + c.fit, 0) / cells.length);
+  }
+
+  const sections: Omit<HeatMapSection, 'avgFit'>[] = [
+    {
+      title: 'Creative Identity', emoji: '🎭',
+      cells: [
+        cell('tone', 'Tone', draft.creativeIdentity.tone, profile.idealCreativeIdentity.tone),
+        cell('humor', 'Humor', draft.creativeIdentity.humorLevel, profile.idealCreativeIdentity.humorLevel),
+        cell('realism', 'Realism', draft.creativeIdentity.realism, profile.idealCreativeIdentity.realism),
+      ],
+    },
+    {
+      title: 'Performance', emoji: '🎬',
+      cells: [
+        cell('pacing', 'Pacing', draft.performanceRhythm.pacing, profile.idealPerformance.pacing),
+        cell('acting', 'Acting', draft.performanceRhythm.actingStyle, profile.idealPerformance.actingStyle),
+        cell('music', 'Music', draft.performanceRhythm.musicStyle, profile.idealPerformance.musicStyle),
+      ],
+    },
+    {
+      title: 'World & Look', emoji: '🌍',
+      cells: [
+        cell('visual', 'Visual', draft.worldLook.visualStyle, profile.idealWorldLook.visualStyle),
+        cell('location', 'Location', draft.worldLook.locationStyle, profile.idealWorldLook.locationStyle),
+        cell('sets', 'Sets', draft.worldLook.setStyle, profile.idealWorldLook.setStyle),
+      ],
+    },
+    {
+      title: 'Storytelling', emoji: '📖',
+      cells: [
+        cell('structure', 'Structure', draft.storytelling.structure, profile.idealStorytelling.structure),
+        cell('density', 'Density', draft.storytelling.narrativeDensity, profile.idealStorytelling.narrativeDensity),
+        cell('dialogue', 'Dialogue', draft.storytelling.dialogueStyle, profile.idealStorytelling.dialogueStyle),
+      ],
+    },
+  ];
+
+  return sections.map(s => ({ ...s, avgFit: sectionAvg(s.cells) }));
 }
 
 export function getBuildingQualityBonuses(buildings: StudioBuilding[]): { production: number; postProduction: number } {

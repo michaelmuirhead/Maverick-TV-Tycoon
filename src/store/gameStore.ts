@@ -34,6 +34,9 @@ interface GameState {
   upgradeBuilding: (buildingId: string) => void;
   startSpinoff: (airedShowId: string) => void;
   startReboot: (airedShowId: string) => void;
+  addMarketing: (productionId: string, spend: number, hypeGain: number) => void;
+  reshootEpisode: (productionId: string, episodeIndex: number) => void;
+  negotiateRenewal: (offerId: string, proposedPayPerEpisode: number) => void;
   acceptRenewal: (offerId: string) => void;
   declineRenewal: (offerId: string) => void;
   markEventsRead: () => void;
@@ -292,6 +295,105 @@ export const useGameStore = create<GameState>()(
           showCreatorStep: 0,
           studio: s.studio ? { ...s.studio, currentDraft: rebootDraft } : null,
         }));
+      },
+
+      addMarketing: (productionId, spend, hypeGain) => {
+        const { studio } = get();
+        if (!studio || studio.money < spend) return;
+        set((s) => ({
+          studio: s.studio ? {
+            ...s.studio,
+            money: s.studio.money - spend,
+            activeProductions: s.studio.activeProductions.map(p =>
+              p.id === productionId
+                ? { ...p, hypeLevel: Math.min(100, (p.hypeLevel ?? 0) + hypeGain), marketingSpend: (p.marketingSpend ?? 0) + spend }
+                : p
+            ),
+          } : null,
+        }));
+      },
+
+      reshootEpisode: (productionId, episodeIndex) => {
+        const { studio } = get();
+        if (!studio) return;
+        const prod = studio.activeProductions.find(p => p.id === productionId);
+        if (!prod) return;
+        const reshootCost = Math.round(
+          ([...prod.draft.mainCast, ...prod.draft.supportingCast].reduce((s, c) => s + c.weeklyFee, 0) +
+           (prod.draft.director?.episodeFee ?? 0) + (prod.draft.writer?.episodeFee ?? 0) +
+           Object.values(prod.draft.production).reduce((s, v) => s + v, 0)) * 0.4
+        );
+        if (studio.money < reshootCost) return;
+        set((s) => ({
+          studio: s.studio ? {
+            ...s.studio,
+            money: s.studio.money - reshootCost,
+            activeProductions: s.studio.activeProductions.map(p => {
+              if (p.id !== productionId) return p;
+              const results = p.episodeResults.map((ep, idx) => {
+                if (idx !== episodeIndex) return ep;
+                return {
+                  ...ep,
+                  wasReshot: true,
+                  criticScore: ep.criticScore !== undefined ? Math.min(100, ep.criticScore + 10 + Math.round(Math.random() * 12)) : ep.criticScore,
+                  audienceScore: ep.audienceScore !== undefined ? Math.min(100, ep.audienceScore + 8 + Math.round(Math.random() * 10)) : ep.audienceScore,
+                };
+              });
+              return { ...p, episodeResults: results, ratingsModifier: Math.min(0.4, p.ratingsModifier + 0.07) };
+            }),
+          } : null,
+        }));
+      },
+
+      negotiateRenewal: (offerId, proposedPay) => {
+        const { studio } = get();
+        if (!studio) return;
+        const offer = studio.renewalOffers.find(o => o.id === offerId);
+        if (!offer) return;
+        const increase = (proposedPay - offer.payPerEpisode) / offer.payPerEpisode;
+        const repBonus = (studio.reputation - 50) / 500;
+        const base = increase <= 0.10 ? 0.82 : increase <= 0.20 ? 0.55 : increase <= 0.30 ? 0.32 : 0.12;
+        const accepted = Math.random() < Math.min(0.95, Math.max(0.05, base + repBonus));
+        if (accepted) {
+          set((s) => ({
+            studio: s.studio ? {
+              ...s.studio,
+              renewalOffers: s.studio.renewalOffers.map(o =>
+                o.id === offerId
+                  ? { ...o, payPerEpisode: proposedPay, negotiationState: 'counter-accepted' as const, counterPayPerEpisode: proposedPay }
+                  : o
+              ),
+              events: [{
+                id: Math.random().toString(36).slice(2),
+                type: 'financial' as const,
+                week: s.studio.week,
+                year: s.studio.year,
+                headline: `${offer.networkId} accepts counter-offer for "${offer.showTitle}"`,
+                description: `S${offer.proposedSeason} renegotiated to ${Math.round(proposedPay / 1000)}K/ep — a ${Math.round(increase * 100)}% raise.`,
+                impact: {},
+                isRead: false,
+              }, ...s.studio!.events].slice(0, 80),
+            } : null,
+          }));
+        } else {
+          set((s) => ({
+            studio: s.studio ? {
+              ...s.studio,
+              renewalOffers: s.studio.renewalOffers.filter(o => o.id !== offerId),
+              events: [{
+                id: Math.random().toString(36).slice(2),
+                type: 'cancellation' as const,
+                week: s.studio.week,
+                year: s.studio.year,
+                headline: `${offer.networkId} rejects counter-offer for "${offer.showTitle}"`,
+                description: `The network has walked away from the renewal. The original offer is no longer on the table.`,
+                impact: { reputation: -1 },
+                isRead: false,
+              }, ...s.studio!.events].slice(0, 80),
+              reputation: Math.max(0, s.studio.reputation - 1),
+            } : null,
+          }));
+        }
       },
 
       acceptRenewal: (offerId) => {
