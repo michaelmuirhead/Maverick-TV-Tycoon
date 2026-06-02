@@ -53,6 +53,8 @@ export interface CrewMember {
   level: 1 | 2 | 3 | 4 | 5;
   episodeFee: number;
   status: 'available' | 'contracted' | 'rival-contracted';
+  genreStrengths?: Genre[];
+  genreWeaknesses?: Genre[];
 }
 
 export interface ProductionBudget {

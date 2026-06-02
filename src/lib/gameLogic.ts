@@ -1,4 +1,4 @@
-import { ShowDraft, Network, Genre, StudioBuilding, BuildingTier } from '@/types/game';
+import { ShowDraft, Network, Genre, StudioBuilding, BuildingTier, CrewMember } from '@/types/game';
 import { GENRE_PROFILES } from '@/data/genres';
 import { BUILDING_CONFIG, TIER_ORDER } from '@/data/buildings';
 
@@ -20,6 +20,12 @@ function avgFit(sliders: Record<string, number>, ideals: Record<string, [number,
   return total / keys.length;
 }
 
+export function calcWriterGenreMultiplier(writer: CrewMember, genre: Genre): number {
+  if (writer.genreStrengths?.includes(genre)) return 1.5;
+  if (writer.genreWeaknesses?.includes(genre)) return 0.5;
+  return 1.0;
+}
+
 export function calcCastQuality(draft: ShowDraft): number {
   const allCast = [...draft.mainCast, ...draft.supportingCast];
   if (!allCast.length) return 0;
@@ -28,7 +34,8 @@ export function calcCastQuality(draft: ShowDraft): number {
     ? (draft.mainCast.reduce((s, c) => s + c.starLevel, 0) / draft.mainCast.length) * 10
     : 0;
   const directorBonus = draft.director ? draft.director.level * 8 : 0;
-  const writerBonus = draft.writer ? draft.writer.level * 6 : 0;
+  const writerMult = draft.writer ? calcWriterGenreMultiplier(draft.writer, draft.genre) : 1;
+  const writerBonus = draft.writer ? draft.writer.level * 6 * writerMult : 0;
   const guestBonus = Math.min(20, (draft.guestStarBudget / 100000) * 3);
   const extras = Math.min(5, (draft.extrasBudget / 50000) * 2);
   const stunt = Math.min(5, (draft.stuntBudget / 100000) * 2);

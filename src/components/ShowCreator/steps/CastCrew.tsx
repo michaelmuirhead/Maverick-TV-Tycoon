@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { ShowDraft, CastMember, CrewMember } from '@/types/game';
+import { ShowDraft, CastMember, CrewMember, Genre } from '@/types/game';
 import { CAST_POOL, CREW_POOL } from '@/data/castPool';
 import { useGameStore } from '@/store/gameStore';
 import { formatMoney } from '@/lib/gameLogic';
@@ -60,7 +60,9 @@ function CastCard({
   );
 }
 
-function CrewCard({ member, hired, onHire }: { member: CrewMember; hired: boolean; onHire: () => void }) {
+function CrewCard({ member, hired, onHire, draftGenre }: { member: CrewMember; hired: boolean; onHire: () => void; draftGenre?: Genre }) {
+  const isSpecialist = draftGenre && member.genreStrengths?.includes(draftGenre);
+  const isWeak = draftGenre && member.genreWeaknesses?.includes(draftGenre);
   return (
     <div
       onClick={onHire}
@@ -71,16 +73,26 @@ function CrewCard({ member, hired, onHire }: { member: CrewMember; hired: boolea
       }`}
     >
       <div className="flex justify-between items-start">
-        <div>
-          <div className="font-semibold text-sm">{member.name}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-semibold text-sm truncate">{member.name}</span>
+            {isSpecialist && <span className="text-xs bg-emerald-900/50 border border-emerald-700/60 text-emerald-300 px-1.5 py-0.5 rounded-full flex-shrink-0">🎯 Specialist</span>}
+            {isWeak && <span className="text-xs bg-amber-900/50 border border-amber-700/60 text-amber-300 px-1.5 py-0.5 rounded-full flex-shrink-0">⚠️ Weak Match</span>}
+          </div>
           <span className="text-xs">{'⭐'.repeat(member.level)}</span>
         </div>
-        <div className={`text-xs font-bold tabular-nums ${hired ? 'text-blue-400' : 'text-zinc-500'}`}>
+        <div className={`text-xs font-bold tabular-nums flex-shrink-0 ${hired ? 'text-blue-400' : 'text-zinc-500'}`}>
           {formatMoney(member.episodeFee)}/ep
         </div>
       </div>
-      <div className="mt-1.5">
+      <div className="mt-1.5 flex flex-wrap gap-1">
         <span className="text-xs bg-zinc-700/60 text-zinc-400 px-1.5 py-0.5 rounded capitalize">{member.role}</span>
+        {member.genreStrengths?.slice(0, 2).map((g) => (
+          <span key={g} className="text-xs bg-emerald-950/60 text-emerald-500 px-1.5 py-0.5 rounded">✓ {g}</span>
+        ))}
+        {member.genreWeaknesses?.slice(0, 2).map((g) => (
+          <span key={g} className="text-xs bg-rose-950/60 text-rose-500 px-1.5 py-0.5 rounded">✗ {g}</span>
+        ))}
       </div>
     </div>
   );
@@ -218,12 +230,13 @@ export default function CastCrew({ draft, onUpdate }: Props) {
           </div>
           <div>
             <h4 className="text-sm font-semibold text-zinc-300 mb-2">Scriptwriter {draft.writer ? `— ${draft.writer.name}` : ''}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
               {writers.map((w) => (
                 <CrewCard
                   key={w.id} member={w}
                   hired={draft.writer?.id === w.id}
                   onHire={() => onUpdate({ writer: draft.writer?.id === w.id ? null : w })}
+                  draftGenre={draft.genre}
                 />
               ))}
             </div>
