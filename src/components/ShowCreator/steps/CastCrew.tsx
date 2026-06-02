@@ -4,6 +4,7 @@ import { ShowDraft, CastMember, CrewMember, Genre } from '@/types/game';
 import { CAST_POOL, CREW_POOL } from '@/data/castPool';
 import { useGameStore } from '@/store/gameStore';
 import { calcCastChemistry, formatMoney } from '@/lib/gameLogic';
+import TalentProfileModal, { Talent } from '@/components/TalentProfileModal';
 
 const PHASE_DOT: Record<string, string> = {
   rising: 'text-emerald-400',
@@ -27,10 +28,11 @@ function StarRating({ level }: { level: number }) {
 }
 
 function CastCard({
-  member, hired, onToggle, contracted, rivalContracted, isDev,
+  member, hired, onToggle, contracted, rivalContracted, isDev, onProfile,
 }: {
   member: CastMember; hired: boolean; onToggle: () => void;
   contracted?: boolean; rivalContracted?: boolean; isDev?: boolean;
+  onProfile?: () => void;
 }) {
   const isDisabled = contracted || rivalContracted;
   return (
@@ -45,8 +47,17 @@ function CastCard({
       }`}
     >
       <div className="flex justify-between items-start gap-2">
-        <div className="min-w-0">
-          <div className="font-semibold text-sm truncate">{member.name}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm truncate">{member.name}</span>
+            {onProfile && (
+              <button
+                onClick={e => { e.stopPropagation(); onProfile(); }}
+                className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex-shrink-0"
+                title="View profile"
+              >👤</button>
+            )}
+          </div>
           <StarRating level={member.starLevel} />
         </div>
         <div className="text-right flex-shrink-0">
@@ -76,7 +87,7 @@ function CastCard({
   );
 }
 
-function CrewCard({ member, hired, onHire, draftGenre }: { member: CrewMember; hired: boolean; onHire: () => void; draftGenre?: Genre }) {
+function CrewCard({ member, hired, onHire, draftGenre, onProfile }: { member: CrewMember; hired: boolean; onHire: () => void; draftGenre?: Genre; onProfile?: () => void }) {
   const isSpecialist = draftGenre && member.genreStrengths?.includes(draftGenre);
   const isWeak = draftGenre && member.genreWeaknesses?.includes(draftGenre);
   return (
@@ -92,6 +103,13 @@ function CrewCard({ member, hired, onHire, draftGenre }: { member: CrewMember; h
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-semibold text-sm truncate">{member.name}</span>
+            {onProfile && (
+              <button
+                onClick={e => { e.stopPropagation(); onProfile(); }}
+                className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex-shrink-0"
+                title="View profile"
+              >👤</button>
+            )}
             {isSpecialist && <span className="text-xs bg-emerald-900/50 border border-emerald-700/60 text-emerald-300 px-1.5 py-0.5 rounded-full flex-shrink-0">🎯 Specialist</span>}
             {isWeak && <span className="text-xs bg-amber-900/50 border border-amber-700/60 text-amber-300 px-1.5 py-0.5 rounded-full flex-shrink-0">⚠️ Weak Match</span>}
           </div>
@@ -116,6 +134,7 @@ function CrewCard({ member, hired, onHire, draftGenre }: { member: CrewMember; h
 
 export default function CastCrew({ draft, onUpdate }: Props) {
   const [tab, setTab] = useState<Tab>('main');
+  const [profileTalent, setProfileTalent] = useState<Talent | null>(null);
 
   const activeProductions = useGameStore((s) => s.studio?.activeProductions ?? []);
   const liveCast = useGameStore((s) => s.studio?.talentPool?.cast ?? CAST_POOL);
@@ -177,6 +196,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
 
   return (
     <div className="space-y-5">
+      {profileTalent && <TalentProfileModal talent={profileTalent} onClose={() => setProfileTalent(null)} />}
       {/* Cost Summary Bar */}
       <div className="bg-zinc-800/60 rounded-xl p-3 flex items-center justify-between">
         <span className="text-xs text-zinc-500">Cast & Crew cost per episode</span>
@@ -231,6 +251,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
                 contracted={contractedIds.has(m.id) && !mainCastIds.has(m.id)}
                 rivalContracted={m.status === 'rival-contracted'}
                 isDev={devRosterIds.has(m.id)}
+                onProfile={() => setProfileTalent(m)}
               />
             ))}
           </div>
@@ -250,6 +271,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
                 onToggle={() => toggleSupporting(m)}
                 contracted={contractedIds.has(m.id) && !supportingIds.has(m.id)}
                 rivalContracted={m.status === 'rival-contracted'}
+                onProfile={() => setProfileTalent(m)}
               />
             ))}
           </div>
@@ -271,6 +293,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
                   hired={draft.showrunner?.id === s.id}
                   onHire={() => onUpdate({ showrunner: draft.showrunner?.id === s.id ? null : s })}
                   draftGenre={draft.genre}
+                  onProfile={() => setProfileTalent(s)}
                 />
               ))}
             </div>
@@ -284,6 +307,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
                   hired={draft.director?.id === d.id}
                   onHire={() => onUpdate({ director: draft.director?.id === d.id ? null : d })}
                   draftGenre={draft.genre}
+                  onProfile={() => setProfileTalent(d)}
                 />
               ))}
             </div>
@@ -297,6 +321,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
                   hired={draft.writer?.id === w.id}
                   onHire={() => onUpdate({ writer: draft.writer?.id === w.id ? null : w })}
                   draftGenre={draft.genre}
+                  onProfile={() => setProfileTalent(w)}
                 />
               ))}
             </div>
