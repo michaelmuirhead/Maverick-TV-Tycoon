@@ -45,8 +45,8 @@ export default function BudgetSlider({
         </div>
         <span className={`text-sm font-bold tabular-nums ${textColor}`}>{formatMoney(value)}</span>
       </div>
-      <div className="relative">
-        <div className="h-2 rounded-full bg-zinc-700 overflow-hidden">
+      <div className="relative h-8 flex items-center">
+        <div className="absolute inset-x-0 h-2 rounded-full bg-zinc-700 overflow-hidden">
           <div className={`h-full rounded-full transition-all ${trackColor}`} style={{ width: `${pct}%` }} />
         </div>
         <input
@@ -56,7 +56,7 @@ export default function BudgetSlider({
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer h-2"
+          className="absolute inset-0 w-full opacity-0 cursor-pointer"
         />
       </div>
       <div className="flex justify-between mt-1">

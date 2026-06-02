@@ -104,11 +104,11 @@ export default function CastCrew({ draft, onUpdate }: Props) {
   const directors = CREW_POOL.filter((c) => c.role === 'director');
   const writers = CREW_POOL.filter((c) => c.role === 'writer');
 
-  const TABS: { id: Tab; label: string }[] = [
-    { id: 'main', label: `Main Cast (${draft.mainCast.length}/5)` },
-    { id: 'supporting', label: `Supporting (${draft.supportingCast.length}/10)` },
-    { id: 'crew', label: 'Key Crew' },
-    { id: 'extras', label: 'Budget Lines' },
+  const TABS: { id: Tab; label: string; shortLabel: string }[] = [
+    { id: 'main', label: `Main (${draft.mainCast.length}/5)`, shortLabel: `Main ${draft.mainCast.length}/5` },
+    { id: 'supporting', label: `Supp. (${draft.supportingCast.length}/10)`, shortLabel: `Supp ${draft.supportingCast.length}/10` },
+    { id: 'crew', label: 'Key Crew', shortLabel: 'Crew' },
+    { id: 'extras', label: 'Budget', shortLabel: '$$$' },
   ];
 
   return (
@@ -129,7 +129,8 @@ export default function CastCrew({ draft, onUpdate }: Props) {
               tab === t.id ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            {t.label}
+            <span className="hidden sm:inline">{t.label}</span>
+            <span className="sm:hidden">{t.shortLabel}</span>
           </button>
         ))}
       </div>
@@ -207,14 +208,14 @@ export default function CastCrew({ draft, onUpdate }: Props) {
                   </div>
                   <span className="text-amber-400 font-bold tabular-nums text-sm">{formatMoney(val)}</span>
                 </div>
-                <div className="relative">
-                  <div className="h-2 rounded-full bg-zinc-700 overflow-hidden">
+                <div className="relative h-8 flex items-center">
+                  <div className="absolute inset-x-0 h-2 rounded-full bg-zinc-700 overflow-hidden">
                     <div className="h-full bg-amber-500 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                   <input
                     type="range" min={0} max={item.max} step={item.step} value={val}
                     onChange={(e) => onUpdate({ [item.key]: Number(e.target.value) } as Partial<ShowDraft>)}
-                    className="absolute inset-0 w-full opacity-0 cursor-pointer h-2"
+                    className="absolute inset-0 w-full opacity-0 cursor-pointer"
                   />
                 </div>
                 <div className="flex justify-between text-xs text-zinc-600 mt-1">

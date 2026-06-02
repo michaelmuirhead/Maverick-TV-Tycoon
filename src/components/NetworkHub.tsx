@@ -60,7 +60,7 @@ export default function NetworkHub() {
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setScreen('show-creator')}
@@ -84,7 +84,7 @@ export default function NetworkHub() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-5 md:space-y-6">
         {/* Show Summary */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
           <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Your Show</h2>
@@ -108,12 +108,12 @@ export default function NetworkHub() {
         </div>
 
         {/* Filter */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {Object.entries(TYPE_LABELS).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border whitespace-nowrap flex-shrink-0 ${
                 filter === key
                   ? 'bg-amber-500 border-amber-500 text-black'
                   : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:border-zinc-500'
