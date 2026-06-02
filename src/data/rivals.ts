@@ -1,0 +1,76 @@
+import { RivalStudio } from '@/types/game';
+
+export const RIVAL_STUDIOS: RivalStudio[] = [
+  {
+    id: 'broadcast-king',
+    name: 'BroadcastKing Studios',
+    logo: '📡',
+    tagline: 'Ratings above all',
+    specialty: ['procedural', 'drama', 'comedy', 'reality'],
+    reputation: 65,
+    activeShows: [
+      { id: 'bk1', title: 'Metro PD', genre: 'procedural', quality: 62, networkId: 'apex', avgRating: 6.2, status: 'airing', seasonNumber: 3 },
+      { id: 'bk2', title: 'Family Hour', genre: 'comedy', quality: 58, networkId: 'crown', avgRating: 5.8, status: 'airing', seasonNumber: 2 },
+    ],
+    completedShows: 12,
+    awardsWon: 1,
+    totalShows: 14,
+  },
+  {
+    id: 'nightowl',
+    name: 'NightOwl Productions',
+    logo: '🦉',
+    tagline: 'For the discerning viewer',
+    specialty: ['drama', 'crime', 'horror', 'limited-series'],
+    reputation: 72,
+    activeShows: [
+      { id: 'no1', title: 'The Reckoning', genre: 'crime', quality: 76, networkId: 'nova-cable', avgRating: 2.8, status: 'airing', seasonNumber: 1 },
+    ],
+    completedShows: 7,
+    awardsWon: 4,
+    totalShows: 8,
+  },
+  {
+    id: 'streamforge',
+    name: 'StreamForge Entertainment',
+    logo: '⚙️',
+    tagline: 'Built for the binge',
+    specialty: ['sci-fi', 'fantasy', 'action', 'horror'],
+    reputation: 78,
+    activeShows: [
+      { id: 'sf1', title: 'Orbital Drift', genre: 'sci-fi', quality: 81, networkId: 'nexus-stream', avgRating: 3.4, status: 'airing', seasonNumber: 2 },
+      { id: 'sf2', title: 'Ironclad', genre: 'action', quality: 72, networkId: 'orbit-plus', avgRating: 2.9, status: 'airing', seasonNumber: 1 },
+    ],
+    completedShows: 5,
+    awardsWon: 6,
+    totalShows: 7,
+  },
+  {
+    id: 'reeldeal',
+    name: 'ReelDeal Pictures',
+    logo: '🎪',
+    tagline: 'Entertainment you can feel',
+    specialty: ['comedy', 'reality', 'talk-show', 'late-night'],
+    reputation: 55,
+    activeShows: [
+      { id: 'rd1', title: 'House of Games', genre: 'reality', quality: 54, networkId: 'pulse-stream', avgRating: 2.1, status: 'airing', seasonNumber: 4 },
+    ],
+    completedShows: 18,
+    awardsWon: 2,
+    totalShows: 19,
+  },
+  {
+    id: 'prestige-path',
+    name: 'Prestige Path Media',
+    logo: '🎖️',
+    tagline: 'Cinema on television',
+    specialty: ['drama', 'limited-series', 'documentary', 'anthology'],
+    reputation: 85,
+    activeShows: [
+      { id: 'pp1', title: 'The Long Silence', genre: 'limited-series', quality: 88, networkId: 'obsidian', avgRating: 1.2, status: 'airing', seasonNumber: 1 },
+    ],
+    completedShows: 4,
+    awardsWon: 9,
+    totalShows: 5,
+  },
+];

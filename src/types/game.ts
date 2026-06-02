@@ -1,16 +1,40 @@
-export type Genre = 'drama' | 'comedy' | 'crime' | 'sci-fi' | 'fantasy' | 'reality' | 'documentary' | 'horror' | 'procedural' | 'action';
+export type Genre =
+  | 'drama' | 'comedy' | 'crime' | 'sci-fi' | 'fantasy'
+  | 'reality' | 'documentary' | 'horror' | 'procedural' | 'action'
+  | 'limited-series' | 'anthology' | 'talk-show' | 'late-night' | 'soap-opera';
 
-export type NetworkType = 'broadcast' | 'cable' | 'premium' | 'streaming';
+export type NetworkType = 'broadcast' | 'cable' | 'premium' | 'streaming' | 'international' | 'specialty';
 
-export type GameScreen = 'welcome' | 'dashboard' | 'show-creator' | 'network-hub' | 'productions' | 'season-results';
+export type GameScreen =
+  | 'welcome' | 'dashboard' | 'show-creator' | 'network-hub'
+  | 'productions' | 'talent-market' | 'awards' | 'rivals';
+
+export type GameEventType =
+  | 'ratings-spike' | 'ratings-drop' | 'viral-moment' | 'scandal'
+  | 'critical-acclaim' | 'production-issue' | 'award-nomination' | 'award-win'
+  | 'renewal-offer' | 'cancellation' | 'talent-news' | 'rival-news' | 'financial';
+
+export interface GameEvent {
+  id: string;
+  type: GameEventType;
+  week: number;
+  year: number;
+  headline: string;
+  description: string;
+  showId?: string;
+  showTitle?: string;
+  impact?: { money?: number; reputation?: number };
+  isRead: boolean;
+}
 
 export interface CastMember {
   id: string;
   name: string;
   role: 'main' | 'supporting' | 'guest';
   starLevel: 1 | 2 | 3 | 4 | 5;
-  weeklyFee: number; // per episode cost
+  weeklyFee: number;
   genre: Genre[];
+  status: 'available' | 'contracted' | 'rival-contracted' | 'unavailable';
 }
 
 export interface CrewMember {
@@ -19,9 +43,11 @@ export interface CrewMember {
   role: 'director' | 'writer' | 'stunt';
   level: 1 | 2 | 3 | 4 | 5;
   episodeFee: number;
+  status: 'available' | 'contracted' | 'rival-contracted';
 }
 
 export interface ProductionBudget {
+  [key: string]: number;
   crew: number;
   recordingStudio: number;
   locations: number;
@@ -29,6 +55,7 @@ export interface ProductionBudget {
 }
 
 export interface PostProductionBudget {
+  [key: string]: number;
   editing: number;
   visualEffects: number;
   soundEffects: number;
@@ -70,7 +97,8 @@ export interface ShowDraft {
   episodeLength: 22 | 44 | 60;
   episodeCount: number;
   logline: string;
-
+  seasonNumber: number;
+  parentShowId?: string;
   mainCast: CastMember[];
   supportingCast: CastMember[];
   director: CrewMember | null;
@@ -78,7 +106,6 @@ export interface ShowDraft {
   guestStarBudget: number;
   extrasBudget: number;
   stuntBudget: number;
-
   production: ProductionBudget;
   postProduction: PostProductionBudget;
   creativeIdentity: CreativeIdentity;
@@ -96,19 +123,94 @@ export interface NetworkDeal {
   seasonNumber: number;
 }
 
+export interface EpisodeResult {
+  episode: number;
+  rating: number;
+  eventId?: string;
+}
+
+export interface ActiveProduction {
+  id: string;
+  draft: ShowDraft;
+  deal: NetworkDeal;
+  quality: number;
+  networkFit: number;
+  seasonNumber: number;
+  currentEpisode: number;
+  totalEpisodes: number;
+  episodeResults: EpisodeResult[];
+  productionWeeks: number;
+  status: 'in-production' | 'airing' | 'completed' | 'cancelled';
+  ratingsModifier: number;
+  baseRating: number;
+  startWeek: number;
+  startYear: number;
+}
+
+export interface RenewalOffer {
+  id: string;
+  productionId: string;
+  showId: string;
+  networkId: string;
+  showTitle: string;
+  genre: Genre;
+  currentSeason: number;
+  proposedSeason: number;
+  episodesOffered: number;
+  payPerEpisode: number;
+  expiresWeek: number;
+  expiresYear: number;
+  originalDraft: ShowDraft;
+}
+
 export interface AiredShow {
   id: string;
   draft: ShowDraft;
   deal: NetworkDeal;
   quality: number;
-  ratings: number[];     // one per aired episode
+  ratings: number[];
   avgRating: number;
   revenue: number;
   cost: number;
   profit: number;
-  status: 'airing' | 'completed' | 'cancelled' | 'renewed';
+  status: 'completed' | 'cancelled' | 'renewed';
   awardsNominations: string[];
   awardsWins: string[];
+  seasonNumber: number;
+}
+
+export interface AwardNomination {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  showId: string;
+  showTitle: string;
+  year: number;
+  isWinner: boolean;
+}
+
+export interface RivalShow {
+  id: string;
+  title: string;
+  genre: Genre;
+  quality: number;
+  networkId: string;
+  avgRating: number;
+  status: 'airing' | 'completed' | 'cancelled';
+  seasonNumber: number;
+}
+
+export interface RivalStudio {
+  id: string;
+  name: string;
+  logo: string;
+  tagline: string;
+  specialty: Genre[];
+  reputation: number;
+  activeShows: RivalShow[];
+  completedShows: number;
+  awardsWon: number;
+  totalShows: number;
 }
 
 export interface Network {
@@ -117,8 +219,8 @@ export interface Network {
   type: NetworkType;
   logo: string;
   tagline: string;
-  reach: number;          // 0-1 multiplier for audience size
-  minQuality: number;     // minimum quality score to accept pitch
+  reach: number;
+  minQuality: number;
   budgetPerEpisode: { min: number; max: number };
   preferredGenres: Genre[];
   preferredStyle: {
@@ -130,13 +232,15 @@ export interface Network {
     visualStyle?: [number, number];
   };
   dealType: 'per-episode' | 'season-bulk';
+  maxActiveShows: number;
+  country?: string;
 }
 
 export interface Studio {
   name: string;
   specialty: Genre;
   money: number;
-  reputation: number; // 0-100
+  reputation: number;
   week: number;
   year: number;
   totalShows: number;
@@ -144,4 +248,11 @@ export interface Studio {
   activeDeals: NetworkDeal[];
   airedShows: AiredShow[];
   currentDraft: ShowDraft | null;
+  activeProductions: ActiveProduction[];
+  renewalOffers: RenewalOffer[];
+  awardNominations: AwardNomination[];
+  events: GameEvent[];
+  rivalStudios: RivalStudio[];
+  awardsSeasonYear: number;
+  networkSlots: Record<string, number>;
 }
