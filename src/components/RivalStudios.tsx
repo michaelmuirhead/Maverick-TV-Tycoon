@@ -110,9 +110,7 @@ export default function RivalStudios() {
               <span className="text-3xl">🎬</span>
               <div>
                 <div className="font-bold text-white text-base">{studio.name}</div>
-                <div className="text-xs text-zinc-500">
-                  {GENRE_PROFILES[studio.specialty]?.emoji} {GENRE_PROFILES[studio.specialty]?.label} Specialist
-                </div>
+                <div className="text-xs text-zinc-500">Independent Studio</div>
               </div>
             </div>
             <div className="text-right">
