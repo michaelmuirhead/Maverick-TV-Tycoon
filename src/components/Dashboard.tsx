@@ -14,6 +14,7 @@ export default function Dashboard() {
 
   if (!studio) return null;
 
+  const buildings = studio.buildings ?? [];
   const genre = GENRE_PROFILES[studio.specialty];
   const profitColor = studio.money >= 5_000_000 ? 'text-emerald-400' : studio.money >= 0 ? 'text-amber-400' : 'text-rose-400';
   const unreadCount = studio.events.filter(e => !e.isRead).length;
@@ -186,7 +187,8 @@ export default function Dashboard() {
               { emoji: '📊', label: 'Productions', sub: `${studio.activeProductions.length} active`, screen: 'productions' as const, accent: 'emerald', action: () => setScreen('productions') },
               { emoji: '🎭', label: 'Talent Market', sub: 'Hire cast & crew', screen: 'talent-market' as const, accent: 'purple', action: () => setScreen('talent-market') },
               { emoji: '🏆', label: 'Awards', sub: `${studio.awardNominations.length} nominations`, screen: 'awards' as const, accent: 'yellow', action: () => setScreen('awards') },
-              { emoji: '🏢', label: 'Rivals', sub: `${studio.rivalStudios.length} competitors`, screen: 'rivals' as const, accent: 'rose', action: () => setScreen('rivals') },
+              { emoji: '⚔️', label: 'Rivals', sub: `${studio.rivalStudios.length} competitors`, screen: 'rivals' as const, accent: 'rose', action: () => setScreen('rivals') },
+              { emoji: '🏢', label: 'Studio HQ', sub: `${buildings.length} facilities`, screen: 'studio-hq' as const, accent: 'zinc', action: () => setScreen('studio-hq') },
             ].map((item) => (
               <button
                 key={item.label}

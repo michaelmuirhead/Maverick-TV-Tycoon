@@ -12,22 +12,42 @@ function StarRating({ level }: { level: number }) {
 }
 
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  available: { label: 'Available', color: 'text-emerald-400 bg-emerald-900/30 border-emerald-800' },
-  contracted: { label: 'On Your Show', color: 'text-amber-400 bg-amber-900/30 border-amber-800' },
-  'rival-contracted': { label: 'With Rival', color: 'text-rose-400 bg-rose-900/30 border-rose-800' },
-  unavailable: { label: 'Unavailable', color: 'text-zinc-500 bg-zinc-800 border-zinc-700' },
+  available:         { label: 'Available',    color: 'text-emerald-400 bg-emerald-900/30 border-emerald-800' },
+  contracted:        { label: 'On Your Show', color: 'text-amber-400 bg-amber-900/30 border-amber-800' },
+  'rival-contracted':{ label: 'With Rival',   color: 'text-rose-400 bg-rose-900/30 border-rose-800' },
+  unavailable:       { label: 'Unavailable',  color: 'text-zinc-500 bg-zinc-800 border-zinc-700' },
 };
+
+const PHASE_BADGE: Record<string, { label: string; color: string }> = {
+  rising:   { label: '📈 Rising',      color: 'text-emerald-300 bg-emerald-950/60 border-emerald-800/50' },
+  peak:     { label: '⭐ Prime',       color: 'text-amber-300 bg-amber-950/60 border-amber-800/50' },
+  declining:{ label: '📉 Late Career', color: 'text-zinc-400 bg-zinc-800/60 border-zinc-700' },
+};
+
+function CareerBadge({ phase, age }: { phase?: string; age?: number }) {
+  if (!phase) return null;
+  const b = PHASE_BADGE[phase];
+  if (!b) return null;
+  return (
+    <span className={`text-xs font-medium px-1.5 py-0.5 rounded border ${b.color}`}>
+      {b.label}{age !== undefined ? ` · ${age}` : ''}
+    </span>
+  );
+}
 
 function CastCard({ member }: { member: CastMember }) {
   const badge = STATUS_BADGE[member.status] ?? STATUS_BADGE.available;
   return (
     <div className={`bg-zinc-900 border rounded-xl p-4 transition-all ${member.status === 'available' ? 'border-zinc-800 hover:border-zinc-600' : 'border-zinc-800 opacity-70'}`}>
-      <div className="flex justify-between items-start mb-2">
-        <div>
-          <div className="font-semibold text-white text-sm">{member.name}</div>
+      <div className="flex justify-between items-start mb-1.5">
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-white text-sm truncate">{member.name}</div>
           <StarRating level={member.starLevel} />
         </div>
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${badge.color}`}>{badge.label}</span>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${badge.color}`}>{badge.label}</span>
+      </div>
+      <div className="mb-2">
+        <CareerBadge phase={member.careerPhase} age={member.age} />
       </div>
       <div className="flex flex-wrap gap-1 mb-2">
         {member.genre.slice(0, 3).map(g => (
@@ -43,14 +63,27 @@ function CrewCard({ member }: { member: CrewMember }) {
   const badge = STATUS_BADGE[member.status] ?? STATUS_BADGE.available;
   return (
     <div className={`bg-zinc-900 border rounded-xl p-4 transition-all ${member.status === 'available' ? 'border-zinc-800 hover:border-zinc-600' : 'border-zinc-800 opacity-70'}`}>
-      <div className="flex justify-between items-start mb-2">
-        <div>
-          <div className="font-semibold text-white text-sm">{member.name}</div>
+      <div className="flex justify-between items-start mb-1.5">
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-white text-sm truncate">{member.name}</div>
           <span className="text-xs text-zinc-500 capitalize">{member.role}</span>
         </div>
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${badge.color}`}>{badge.label}</span>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${badge.color}`}>{badge.label}</span>
       </div>
-      <div className="text-xs mb-1">{'⭐'.repeat(member.level)}</div>
+      <div className="mb-1.5">
+        <CareerBadge phase={member.careerPhase} age={member.age} />
+      </div>
+      <div className="text-xs mb-1.5">{'⭐'.repeat(member.level)}</div>
+      {(member.genreStrengths?.length || member.genreWeaknesses?.length) ? (
+        <div className="flex flex-wrap gap-1 mb-1.5">
+          {member.genreStrengths?.slice(0, 2).map(g => (
+            <span key={g} className="text-xs bg-emerald-950/60 text-emerald-500 px-1.5 py-0.5 rounded">✓ {g}</span>
+          ))}
+          {member.genreWeaknesses?.slice(0, 2).map(g => (
+            <span key={g} className="text-xs bg-rose-950/60 text-rose-500 px-1.5 py-0.5 rounded">✗ {g}</span>
+          ))}
+        </div>
+      ) : null}
       <div className="text-xs text-zinc-500">Fee: <span className="font-bold text-zinc-300 tabular-nums">{formatMoney(member.episodeFee)}/episode</span></div>
     </div>
   );
@@ -72,11 +105,14 @@ export default function TalentMarket() {
     studio.activeProductions.flatMap(p => [p.draft.director?.id, p.draft.writer?.id].filter(Boolean) as string[])
   );
 
-  const castWithStatus: CastMember[] = CAST_POOL.map(c => ({
+  const liveCast = studio.talentPool?.cast ?? CAST_POOL;
+  const liveCrew = studio.talentPool?.crew ?? CREW_POOL;
+
+  const castWithStatus: CastMember[] = liveCast.filter(c => c.status !== 'unavailable').map(c => ({
     ...c,
     status: contractedCastIds.has(c.id) ? 'contracted' : c.status,
   }));
-  const crewWithStatus: CrewMember[] = CREW_POOL.map(c => ({
+  const crewWithStatus: CrewMember[] = liveCrew.map(c => ({
     ...c,
     status: contractedCrewIds.has(c.id) ? 'contracted' : c.status,
   }));

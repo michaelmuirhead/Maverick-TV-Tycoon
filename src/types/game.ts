@@ -7,7 +7,16 @@ export type NetworkType = 'broadcast' | 'cable' | 'premium' | 'streaming' | 'int
 
 export type GameScreen =
   | 'welcome' | 'dashboard' | 'show-creator' | 'network-hub'
-  | 'productions' | 'talent-market' | 'awards' | 'rivals';
+  | 'productions' | 'talent-market' | 'awards' | 'rivals' | 'studio-hq';
+
+export type BuildingType = 'recording-studio' | 'editing-suite';
+export type BuildingTier = 'basic' | 'professional' | 'prestige';
+
+export interface StudioBuilding {
+  id: string;
+  type: BuildingType;
+  tier: BuildingTier;
+}
 
 export type GameEventType =
   | 'ratings-spike' | 'ratings-drop' | 'viral-moment' | 'scandal'
@@ -35,6 +44,8 @@ export interface CastMember {
   weeklyFee: number;
   genre: Genre[];
   status: 'available' | 'contracted' | 'rival-contracted' | 'unavailable';
+  age?: number;
+  careerPhase?: 'rising' | 'peak' | 'declining';
 }
 
 export interface CrewMember {
@@ -44,6 +55,10 @@ export interface CrewMember {
   level: 1 | 2 | 3 | 4 | 5;
   episodeFee: number;
   status: 'available' | 'contracted' | 'rival-contracted';
+  genreStrengths?: Genre[];
+  genreWeaknesses?: Genre[];
+  age?: number;
+  careerPhase?: 'rising' | 'peak' | 'declining';
 }
 
 export interface ProductionBudget {
@@ -99,6 +114,14 @@ export interface ShowDraft {
   logline: string;
   seasonNumber: number;
   parentShowId?: string;
+  showType?: 'spinoff' | 'reboot';
+  isRevival?: boolean;
+  revivedFromShowId?: string;
+  originalNetworkId?: string;
+  plannedEnding?: boolean;
+  flashbackEpisode?: boolean;
+  flashbackEpisodeNum?: number;
+  twoPartFinale?: boolean;
   mainCast: CastMember[];
   supportingCast: CastMember[];
   director: CrewMember | null;
@@ -127,7 +150,10 @@ export interface NetworkDeal {
 export interface EpisodeResult {
   episode: number;
   rating: number;
+  criticScore?: number;
+  audienceScore?: number;
   eventId?: string;
+  wasReshot?: boolean;
 }
 
 export interface ActiveProduction {
@@ -146,6 +172,13 @@ export interface ActiveProduction {
   baseRating: number;
   startWeek: number;
   startYear: number;
+  hypeLevel?: number;
+  marketingSpend?: number;
+  wasReshot?: boolean;
+  plannedEnding?: boolean;
+  includeFlashback?: boolean;
+  flashbackEpisodeNum?: number;
+  includeTwoPartFinale?: boolean;
 }
 
 export interface RenewalOffer {
@@ -162,6 +195,13 @@ export interface RenewalOffer {
   expiresWeek: number;
   expiresYear: number;
   originalDraft: ShowDraft;
+  negotiationState?: 'counter-accepted' | 'counter-rejected';
+  counterPayPerEpisode?: number;
+  networkRenewalScore?: number;
+  plannedEnding?: boolean;
+  includeFlashback?: boolean;
+  flashbackEpisodeNum?: number;
+  includeTwoPartFinale?: boolean;
 }
 
 export interface AiredShow {
@@ -171,6 +211,8 @@ export interface AiredShow {
   quality: number;
   ratings: number[];
   avgRating: number;
+  avgCriticScore?: number;
+  avgAudienceScore?: number;
   revenue: number;
   cost: number;
   profit: number;
@@ -188,6 +230,8 @@ export interface AwardNomination {
   showTitle: string;
   year: number;
   isWinner: boolean;
+  awardShowId?: string;
+  awardShowName?: string;
 }
 
 export interface RivalShow {
@@ -256,6 +300,11 @@ export interface Studio {
   events: GameEvent[];
   rivalStudios: RivalStudio[];
   awardsSeasonYear: number;
+  processedAwardCeremonies?: Record<string, number>;
+  networkReachModifiers?: Record<string, number>;
   networkSlots: Record<string, number>;
   genrePopularity: Record<string, number>;
+  buildings?: StudioBuilding[];
+  talentPool?: { cast: CastMember[]; crew: CrewMember[] };
+  lastSuccessfulDraft?: ShowDraft;
 }

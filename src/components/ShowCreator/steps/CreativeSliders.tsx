@@ -2,6 +2,8 @@
 import React from 'react';
 import { ShowDraft } from '@/types/game';
 import SliderSection from '@/components/ui/SliderSection';
+import { useGameStore } from '@/store/gameStore';
+import { GENRE_PROFILES } from '@/data/genres';
 
 interface Props {
   draft: ShowDraft;
@@ -9,8 +11,44 @@ interface Props {
 }
 
 export default function CreativeSliders({ draft, onUpdate }: Props) {
+  const lastSuccessfulDraft = useGameStore(s => s.studio?.lastSuccessfulDraft);
+  const genrePopularity = useGameStore(s => s.studio?.genrePopularity ?? {});
+  const genrePop = genrePopularity[draft.genre] ?? 50;
+  const genre = GENRE_PROFILES[draft.genre];
+
+  const canLoadLastKnown = lastSuccessfulDraft && lastSuccessfulDraft.genre === draft.genre;
+
+  const loadLastKnown = () => {
+    if (!lastSuccessfulDraft) return;
+    onUpdate({
+      creativeIdentity: { ...lastSuccessfulDraft.creativeIdentity },
+      performanceRhythm: { ...lastSuccessfulDraft.performanceRhythm },
+      worldLook: { ...lastSuccessfulDraft.worldLook },
+      storytelling: { ...lastSuccessfulDraft.storytelling },
+    });
+  };
+
   return (
     <div className="space-y-6">
+      {/* Genre popularity + Last Known Values toolbar */}
+      <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-zinc-500">{genre.emoji} {genre.label} market:</span>
+          <span className={`font-bold tabular-nums ${genrePop >= 70 ? 'text-emerald-400' : genrePop >= 45 ? 'text-amber-400' : 'text-rose-400'}`}>
+            {genrePop >= 80 ? '🔥' : genrePop >= 60 ? '📈' : genrePop <= 25 ? '❄️' : '📊'} {genrePop}/100
+          </span>
+        </div>
+        {canLoadLastKnown && (
+          <button
+            onClick={loadLastKnown}
+            className="text-xs px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 font-medium rounded-lg transition-all"
+            title={`Load creative settings from your last successful ${draft.genre} show`}
+          >
+            📋 Last Known Values
+          </button>
+        )}
+      </div>
+
       <SliderSection
         title="Creative Identity"
         description="Define the tone and feel of your show."

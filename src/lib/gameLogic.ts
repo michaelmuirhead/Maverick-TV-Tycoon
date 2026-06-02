@@ -1,5 +1,6 @@
-import { ShowDraft, Network, Genre } from '@/types/game';
+import { ShowDraft, Network, Genre, StudioBuilding, BuildingTier, CrewMember, AiredShow } from '@/types/game';
 import { GENRE_PROFILES } from '@/data/genres';
+import { BUILDING_CONFIG, TIER_ORDER } from '@/data/buildings';
 
 function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
@@ -19,6 +20,15 @@ function avgFit(sliders: Record<string, number>, ideals: Record<string, [number,
   return total / keys.length;
 }
 
+export function calcCrewGenreMultiplier(member: CrewMember, genre: Genre): number {
+  if (member.genreStrengths?.includes(genre)) return 1.5;
+  if (member.genreWeaknesses?.includes(genre)) return 0.5;
+  return 1.0;
+}
+
+/** @deprecated use calcCrewGenreMultiplier */
+export const calcWriterGenreMultiplier = calcCrewGenreMultiplier;
+
 export function calcCastQuality(draft: ShowDraft): number {
   const allCast = [...draft.mainCast, ...draft.supportingCast];
   if (!allCast.length) return 0;
@@ -26,8 +36,10 @@ export function calcCastQuality(draft: ShowDraft): number {
   const mainBonus = draft.mainCast.length > 0
     ? (draft.mainCast.reduce((s, c) => s + c.starLevel, 0) / draft.mainCast.length) * 10
     : 0;
-  const directorBonus = draft.director ? draft.director.level * 8 : 0;
-  const writerBonus = draft.writer ? draft.writer.level * 6 : 0;
+  const directorMult = draft.director ? calcCrewGenreMultiplier(draft.director, draft.genre) : 1;
+  const directorBonus = draft.director ? draft.director.level * 8 * directorMult : 0;
+  const writerMult = draft.writer ? calcCrewGenreMultiplier(draft.writer, draft.genre) : 1;
+  const writerBonus = draft.writer ? draft.writer.level * 6 * writerMult : 0;
   const guestBonus = Math.min(20, (draft.guestStarBudget / 100000) * 3);
   const extras = Math.min(5, (draft.extrasBudget / 50000) * 2);
   const stunt = Math.min(5, (draft.stuntBudget / 100000) * 2);
@@ -35,7 +47,7 @@ export function calcCastQuality(draft: ShowDraft): number {
   return clamp(starAvg * 14 + mainBonus * 0.2 + directorBonus * 0.4 + writerBonus * 0.3 + guestBonus + extras + stunt, 0, 100);
 }
 
-export function calcProductionQuality(draft: ShowDraft): number {
+export function calcProductionQuality(draft: ShowDraft, tierBonus = 0): number {
   const { crew, recordingStudio, locations, sets } = draft.production;
   const maxCrew = 500000;
   const maxStudio = 300000;
@@ -48,10 +60,10 @@ export function calcProductionQuality(draft: ShowDraft): number {
     (locations / maxLoc) * 25 +
     (sets / maxSets) * 25;
 
-  return clamp(score, 0, 100);
+  return clamp(score + tierBonus, 0, 100);
 }
 
-export function calcPostProductionQuality(draft: ShowDraft): number {
+export function calcPostProductionQuality(draft: ShowDraft, tierBonus = 0): number {
   const { editing, visualEffects, soundEffects, music } = draft.postProduction;
   const maxEdit = 200000;
   const maxVfx = 5000000;
@@ -68,7 +80,7 @@ export function calcPostProductionQuality(draft: ShowDraft): number {
     (soundEffects / maxSfx) * otherWeight * 100 +
     (music / maxMusic) * otherWeight * 100;
 
-  return clamp(score, 0, 100);
+  return clamp(score + tierBonus, 0, 100);
 }
 
 export function calcCreativeGenreFit(draft: ShowDraft): number {
@@ -93,14 +105,108 @@ export function calcCreativeGenreFit(draft: ShowDraft): number {
   return (ciFit * 0.35 + prFit * 0.25 + wlFit * 0.20 + stFit * 0.20);
 }
 
-export function calcShowQuality(draft: ShowDraft): number {
+export function calcShowQuality(
+  draft: ShowDraft,
+  buildingBonuses?: { production?: number; postProduction?: number }
+): number {
   const castQ = calcCastQuality(draft);
-  const prodQ = calcProductionQuality(draft);
-  const postQ = calcPostProductionQuality(draft);
+  const prodQ = calcProductionQuality(draft, buildingBonuses?.production ?? 0);
+  const postQ = calcPostProductionQuality(draft, buildingBonuses?.postProduction ?? 0);
   const creativeQ = calcCreativeGenreFit(draft);
 
-  const quality = castQ * 0.30 + prodQ * 0.22 + postQ * 0.18 + creativeQ * 0.30;
+  let quality = castQ * 0.30 + prodQ * 0.22 + postQ * 0.18 + creativeQ * 0.30;
+
+  // Creative genius: exceptional genre fit gives a non-linear bonus (up to +10 pts at perfect fit)
+  if (creativeQ >= 80) quality += (creativeQ - 80) * 0.5;
+
   return Math.round(clamp(quality, 0, 100));
+}
+
+export interface HeatMapCell {
+  key: string;
+  label: string;
+  value: number;
+  idealLo: number;
+  idealHi: number;
+  fit: number;
+  isPerfect: boolean;
+}
+
+export interface HeatMapSection {
+  title: string;
+  emoji: string;
+  avgFit: number;
+  cells: HeatMapCell[];
+}
+
+export function getCreativeFitHeatMap(draft: ShowDraft): HeatMapSection[] {
+  const profile = GENRE_PROFILES[draft.genre];
+
+  function cell(key: string, label: string, value: number, range: [number, number]): HeatMapCell {
+    const f = fitScore(value, range);
+    return { key, label, value, idealLo: range[0], idealHi: range[1], fit: Math.round(f), isPerfect: f >= 95 };
+  }
+
+  function sectionAvg(cells: HeatMapCell[]) {
+    return Math.round(cells.reduce((s, c) => s + c.fit, 0) / cells.length);
+  }
+
+  const sections: Omit<HeatMapSection, 'avgFit'>[] = [
+    {
+      title: 'Creative Identity', emoji: '🎭',
+      cells: [
+        cell('tone', 'Tone', draft.creativeIdentity.tone, profile.idealCreativeIdentity.tone),
+        cell('humor', 'Humor', draft.creativeIdentity.humorLevel, profile.idealCreativeIdentity.humorLevel),
+        cell('realism', 'Realism', draft.creativeIdentity.realism, profile.idealCreativeIdentity.realism),
+      ],
+    },
+    {
+      title: 'Performance', emoji: '🎬',
+      cells: [
+        cell('pacing', 'Pacing', draft.performanceRhythm.pacing, profile.idealPerformance.pacing),
+        cell('acting', 'Acting', draft.performanceRhythm.actingStyle, profile.idealPerformance.actingStyle),
+        cell('music', 'Music', draft.performanceRhythm.musicStyle, profile.idealPerformance.musicStyle),
+      ],
+    },
+    {
+      title: 'World & Look', emoji: '🌍',
+      cells: [
+        cell('visual', 'Visual', draft.worldLook.visualStyle, profile.idealWorldLook.visualStyle),
+        cell('location', 'Location', draft.worldLook.locationStyle, profile.idealWorldLook.locationStyle),
+        cell('sets', 'Sets', draft.worldLook.setStyle, profile.idealWorldLook.setStyle),
+      ],
+    },
+    {
+      title: 'Storytelling', emoji: '📖',
+      cells: [
+        cell('structure', 'Structure', draft.storytelling.structure, profile.idealStorytelling.structure),
+        cell('density', 'Density', draft.storytelling.narrativeDensity, profile.idealStorytelling.narrativeDensity),
+        cell('dialogue', 'Dialogue', draft.storytelling.dialogueStyle, profile.idealStorytelling.dialogueStyle),
+      ],
+    },
+  ];
+
+  return sections.map(s => ({ ...s, avgFit: sectionAvg(s.cells) }));
+}
+
+export function getBuildingQualityBonuses(buildings: StudioBuilding[]): { production: number; postProduction: number } {
+  const rsBuildings = buildings.filter(b => b.type === 'recording-studio');
+  const esBuildings = buildings.filter(b => b.type === 'editing-suite');
+
+  const bestTier = (blds: StudioBuilding[]): BuildingTier =>
+    blds.reduce((best, b) =>
+      TIER_ORDER.indexOf(b.tier) > TIER_ORDER.indexOf(best) ? b.tier : best,
+      'basic' as BuildingTier
+    );
+
+  return {
+    production: rsBuildings.length ? BUILDING_CONFIG['recording-studio'][bestTier(rsBuildings)].qualityBonus : 0,
+    postProduction: esBuildings.length ? BUILDING_CONFIG['editing-suite'][bestTier(esBuildings)].qualityBonus : 0,
+  };
+}
+
+export function getBuildingCapacity(buildings: StudioBuilding[], type: 'recording-studio' | 'editing-suite'): number {
+  return buildings.filter(b => b.type === type).reduce((sum, b) => sum + BUILDING_CONFIG[type][b.tier].capacity, 0);
 }
 
 export function calcEpisodeCost(draft: ShowDraft): number {
@@ -184,6 +290,28 @@ export function formatMoney(amount: number): string {
   if (Math.abs(amount) >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
   if (Math.abs(amount) >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
   return `$${amount}`;
+}
+
+export function calcRevivalBoost(draft: ShowDraft, airedShows: AiredShow[]): number {
+  if (!draft.isRevival || !draft.revivedFromShowId) return 0;
+  const parent = airedShows.find((s) => s.id === draft.revivedFromShowId);
+  if (!parent) return 0;
+  // Established fanbase: 8% base + up to 12% based on original quality
+  return 0.08 + (parent.quality / 100) * 0.12;
+}
+
+export function calcParentBoost(draft: ShowDraft, airedShows: AiredShow[]): number {
+  if (!draft.parentShowId || !draft.showType) return 0;
+  const parent = airedShows.find((s) => s.id === draft.parentShowId);
+  if (!parent) return 0;
+  if (draft.showType === 'spinoff') {
+    return 0.05 + (parent.quality / 100) * 0.15;
+  }
+  if (draft.showType === 'reboot') {
+    const nostalgia = parent.status === 'completed' ? 0.05 : 0;
+    return nostalgia + (parent.quality / 100) * 0.20;
+  }
+  return 0;
 }
 
 export function createDefaultDraft(): ShowDraft {

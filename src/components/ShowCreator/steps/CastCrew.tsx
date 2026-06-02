@@ -1,7 +1,14 @@
 'use client';
 import React, { useState } from 'react';
-import { ShowDraft, CastMember, CrewMember } from '@/types/game';
+import { ShowDraft, CastMember, CrewMember, Genre } from '@/types/game';
 import { CAST_POOL, CREW_POOL } from '@/data/castPool';
+import { useGameStore } from '@/store/gameStore';
+
+const PHASE_DOT: Record<string, string> = {
+  rising: 'text-emerald-400',
+  peak: 'text-amber-400',
+  declining: 'text-zinc-500',
+};
 import { formatMoney } from '@/lib/gameLogic';
 
 interface Props {
@@ -19,26 +26,44 @@ function StarRating({ level }: { level: number }) {
   );
 }
 
-function CastCard({ member, hired, onToggle }: { member: CastMember; hired: boolean; onToggle: () => void }) {
+function CastCard({
+  member, hired, onToggle, contracted, rivalContracted,
+}: {
+  member: CastMember; hired: boolean; onToggle: () => void;
+  contracted?: boolean; rivalContracted?: boolean;
+}) {
+  const isDisabled = contracted || rivalContracted;
   return (
     <div
-      onClick={onToggle}
-      className={`p-3 rounded-xl border cursor-pointer transition-all duration-150 ${
-        hired
-          ? 'bg-amber-500/15 border-amber-500/60 text-amber-200'
-          : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500'
+      onClick={isDisabled ? undefined : onToggle}
+      className={`p-3 rounded-xl border transition-all duration-150 ${
+        isDisabled
+          ? 'bg-zinc-900/40 border-zinc-800 opacity-50 cursor-not-allowed'
+          : hired
+          ? 'bg-amber-500/15 border-amber-500/60 text-amber-200 cursor-pointer'
+          : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500 cursor-pointer'
       }`}
     >
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="font-semibold text-sm">{member.name}</div>
+      <div className="flex justify-between items-start gap-2">
+        <div className="min-w-0">
+          <div className="font-semibold text-sm truncate">{member.name}</div>
           <StarRating level={member.starLevel} />
         </div>
-        <div className={`text-xs font-bold tabular-nums ${hired ? 'text-amber-400' : 'text-zinc-500'}`}>
-          {formatMoney(member.weeklyFee)}/ep
+        <div className="text-right flex-shrink-0">
+          <div className={`text-xs font-bold tabular-nums ${hired ? 'text-amber-400' : 'text-zinc-500'}`}>
+            {formatMoney(member.weeklyFee)}/ep
+          </div>
+          {contracted && <span className="text-xs text-rose-400 font-semibold block mt-0.5">On Show</span>}
+          {rivalContracted && <span className="text-xs text-purple-400 font-semibold block mt-0.5">Rival Studio</span>}
         </div>
       </div>
-      <div className="mt-1.5 flex flex-wrap gap-1">
+      <div className="mt-1.5 flex flex-wrap gap-1 items-center">
+        {member.careerPhase && (
+          <span className={`text-xs ${PHASE_DOT[member.careerPhase] ?? ''}`}>
+            {member.careerPhase === 'rising' ? '📈' : member.careerPhase === 'declining' ? '📉' : '⭐'}
+            {member.age !== undefined ? ` ${member.age}` : ''}
+          </span>
+        )}
         {member.genre.slice(0, 3).map((g) => (
           <span key={g} className="text-xs bg-zinc-700/60 text-zinc-400 px-1.5 py-0.5 rounded">{g}</span>
         ))}
@@ -47,7 +72,9 @@ function CastCard({ member, hired, onToggle }: { member: CastMember; hired: bool
   );
 }
 
-function CrewCard({ member, hired, onHire }: { member: CrewMember; hired: boolean; onHire: () => void }) {
+function CrewCard({ member, hired, onHire, draftGenre }: { member: CrewMember; hired: boolean; onHire: () => void; draftGenre?: Genre }) {
+  const isSpecialist = draftGenre && member.genreStrengths?.includes(draftGenre);
+  const isWeak = draftGenre && member.genreWeaknesses?.includes(draftGenre);
   return (
     <div
       onClick={onHire}
@@ -58,16 +85,26 @@ function CrewCard({ member, hired, onHire }: { member: CrewMember; hired: boolea
       }`}
     >
       <div className="flex justify-between items-start">
-        <div>
-          <div className="font-semibold text-sm">{member.name}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-semibold text-sm truncate">{member.name}</span>
+            {isSpecialist && <span className="text-xs bg-emerald-900/50 border border-emerald-700/60 text-emerald-300 px-1.5 py-0.5 rounded-full flex-shrink-0">🎯 Specialist</span>}
+            {isWeak && <span className="text-xs bg-amber-900/50 border border-amber-700/60 text-amber-300 px-1.5 py-0.5 rounded-full flex-shrink-0">⚠️ Weak Match</span>}
+          </div>
           <span className="text-xs">{'⭐'.repeat(member.level)}</span>
         </div>
-        <div className={`text-xs font-bold tabular-nums ${hired ? 'text-blue-400' : 'text-zinc-500'}`}>
+        <div className={`text-xs font-bold tabular-nums flex-shrink-0 ${hired ? 'text-blue-400' : 'text-zinc-500'}`}>
           {formatMoney(member.episodeFee)}/ep
         </div>
       </div>
-      <div className="mt-1.5">
+      <div className="mt-1.5 flex flex-wrap gap-1">
         <span className="text-xs bg-zinc-700/60 text-zinc-400 px-1.5 py-0.5 rounded capitalize">{member.role}</span>
+        {member.genreStrengths?.slice(0, 2).map((g) => (
+          <span key={g} className="text-xs bg-emerald-950/60 text-emerald-500 px-1.5 py-0.5 rounded">✓ {g}</span>
+        ))}
+        {member.genreWeaknesses?.slice(0, 2).map((g) => (
+          <span key={g} className="text-xs bg-rose-950/60 text-rose-500 px-1.5 py-0.5 rounded">✗ {g}</span>
+        ))}
       </div>
     </div>
   );
@@ -75,6 +112,18 @@ function CrewCard({ member, hired, onHire }: { member: CrewMember; hired: boolea
 
 export default function CastCrew({ draft, onUpdate }: Props) {
   const [tab, setTab] = useState<Tab>('main');
+
+  const activeProductions = useGameStore((s) => s.studio?.activeProductions ?? []);
+  const liveCast = useGameStore((s) => s.studio?.talentPool?.cast ?? CAST_POOL);
+  const liveCrew = useGameStore((s) => s.studio?.talentPool?.crew ?? CREW_POOL);
+
+  // IDs of actors locked into other active productions
+  const contractedIds = new Set(
+    activeProductions.flatMap((p) => [
+      ...p.draft.mainCast.map((c) => c.id),
+      ...p.draft.supportingCast.map((c) => c.id),
+    ])
+  );
 
   const mainCastIds = new Set(draft.mainCast.map((c) => c.id));
   const supportingIds = new Set(draft.supportingCast.map((c) => c.id));
@@ -99,10 +148,15 @@ export default function CastCrew({ draft, onUpdate }: Props) {
   const dirCost = draft.director?.episodeFee ?? 0;
   const writerCost = draft.writer?.episodeFee ?? 0;
 
-  const availableMain = CAST_POOL.filter((c) => !supportingIds.has(c.id));
-  const availableSupporting = CAST_POOL.filter((c) => !mainCastIds.has(c.id));
-  const directors = CREW_POOL.filter((c) => c.role === 'director');
-  const writers = CREW_POOL.filter((c) => c.role === 'writer');
+  // Filter out fully unavailable; show rival-contracted and on-show as disabled
+  const availableMain = liveCast.filter(
+    (c) => c.role === 'main' && c.status !== 'unavailable' && !supportingIds.has(c.id)
+  );
+  const availableSupporting = liveCast.filter(
+    (c) => c.role === 'supporting' && c.status !== 'unavailable' && !mainCastIds.has(c.id)
+  );
+  const directors = liveCrew.filter((c) => c.role === 'director');
+  const writers = liveCrew.filter((c) => c.role === 'writer');
 
   const TABS: { id: Tab; label: string; shortLabel: string }[] = [
     { id: 'main', label: `Main (${draft.mainCast.length}/5)`, shortLabel: `Main ${draft.mainCast.length}/5` },
@@ -140,8 +194,15 @@ export default function CastCrew({ draft, onUpdate }: Props) {
         <div className="space-y-3">
           <p className="text-xs text-zinc-500">Select up to 5 lead actors. Higher star level = better quality boost.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
-            {availableMain.filter((c) => c.role === 'main').map((m) => (
-              <CastCard key={m.id} member={m} hired={mainCastIds.has(m.id)} onToggle={() => toggleMain(m)} />
+            {availableMain.map((m) => (
+              <CastCard
+                key={m.id}
+                member={m}
+                hired={mainCastIds.has(m.id)}
+                onToggle={() => toggleMain(m)}
+                contracted={contractedIds.has(m.id) && !mainCastIds.has(m.id)}
+                rivalContracted={m.status === 'rival-contracted'}
+              />
             ))}
           </div>
         </div>
@@ -152,8 +213,15 @@ export default function CastCrew({ draft, onUpdate }: Props) {
         <div className="space-y-3">
           <p className="text-xs text-zinc-500">Select up to 10 supporting actors.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
-            {availableSupporting.filter((c) => c.role === 'supporting').map((m) => (
-              <CastCard key={m.id} member={m} hired={supportingIds.has(m.id)} onToggle={() => toggleSupporting(m)} />
+            {availableSupporting.map((m) => (
+              <CastCard
+                key={m.id}
+                member={m}
+                hired={supportingIds.has(m.id)}
+                onToggle={() => toggleSupporting(m)}
+                contracted={contractedIds.has(m.id) && !supportingIds.has(m.id)}
+                rivalContracted={m.status === 'rival-contracted'}
+              />
             ))}
           </div>
         </div>
@@ -164,24 +232,26 @@ export default function CastCrew({ draft, onUpdate }: Props) {
         <div className="space-y-5">
           <div>
             <h4 className="text-sm font-semibold text-zinc-300 mb-2">Director {draft.director ? `— ${draft.director.name}` : ''}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
               {directors.map((d) => (
                 <CrewCard
                   key={d.id} member={d}
                   hired={draft.director?.id === d.id}
                   onHire={() => onUpdate({ director: draft.director?.id === d.id ? null : d })}
+                  draftGenre={draft.genre}
                 />
               ))}
             </div>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-zinc-300 mb-2">Scriptwriter {draft.writer ? `— ${draft.writer.name}` : ''}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
               {writers.map((w) => (
                 <CrewCard
                   key={w.id} member={w}
                   hired={draft.writer?.id === w.id}
                   onHire={() => onUpdate({ writer: draft.writer?.id === w.id ? null : w })}
+                  draftGenre={draft.genre}
                 />
               ))}
             </div>
