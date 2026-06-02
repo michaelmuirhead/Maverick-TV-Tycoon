@@ -1,4 +1,4 @@
-import { ShowDraft, Network, Genre, StudioBuilding, BuildingTier, CrewMember } from '@/types/game';
+import { ShowDraft, Network, Genre, StudioBuilding, BuildingTier, CrewMember, AiredShow } from '@/types/game';
 import { GENRE_PROFILES } from '@/data/genres';
 import { BUILDING_CONFIG, TIER_ORDER } from '@/data/buildings';
 
@@ -219,6 +219,20 @@ export function formatMoney(amount: number): string {
   if (Math.abs(amount) >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
   if (Math.abs(amount) >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
   return `$${amount}`;
+}
+
+export function calcParentBoost(draft: ShowDraft, airedShows: AiredShow[]): number {
+  if (!draft.parentShowId || !draft.showType) return 0;
+  const parent = airedShows.find((s) => s.id === draft.parentShowId);
+  if (!parent) return 0;
+  if (draft.showType === 'spinoff') {
+    return 0.05 + (parent.quality / 100) * 0.15;
+  }
+  if (draft.showType === 'reboot') {
+    const nostalgia = parent.status === 'completed' ? 0.05 : 0;
+    return nostalgia + (parent.quality / 100) * 0.20;
+  }
+  return 0;
 }
 
 export function createDefaultDraft(): ShowDraft {

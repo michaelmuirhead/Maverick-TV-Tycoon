@@ -178,6 +178,8 @@ function RenewalCard({ offer }: { offer: RenewalOffer }) {
 
 function AiredShowRow({ show }: { show: AiredShow }) {
   const [expanded, setExpanded] = useState(false);
+  const startSpinoff = useGameStore(s => s.startSpinoff);
+  const startReboot = useGameStore(s => s.startReboot);
   const network = NETWORKS.find(n => n.id === show.deal.networkId);
   const genre = GENRE_PROFILES[show.draft.genre];
   const statusColors: Record<string, string> = {
@@ -261,6 +263,24 @@ function AiredShowRow({ show }: { show: AiredShow }) {
               {show.awardsNominations.filter(n => !show.awardsWins.includes(n)).map(n => <span key={n} className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-0.5 rounded-full">📜 {n}</span>)}
             </div>
           )}
+
+          <div className="pt-1 border-t border-zinc-800">
+            <div className="text-xs text-zinc-600 mb-2">Extend this universe</div>
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); startSpinoff(show.id); }}
+                className="flex-1 py-2 bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800/60 text-blue-300 font-semibold text-xs rounded-xl transition-all"
+              >
+                🔀 Create Spin-off
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); startReboot(show.id); }}
+                className="flex-1 py-2 bg-purple-900/30 hover:bg-purple-900/50 border border-purple-800/60 text-purple-300 font-semibold text-xs rounded-xl transition-all"
+              >
+                🔄 Reboot Series
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

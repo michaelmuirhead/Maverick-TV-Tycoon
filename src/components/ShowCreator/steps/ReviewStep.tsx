@@ -1,10 +1,10 @@
 'use client';
 import React from 'react';
-import { ShowDraft } from '@/types/game';
+import { ShowDraft, AiredShow } from '@/types/game';
 import {
   calcShowQuality, calcEpisodeCost, calcCastQuality,
   calcProductionQuality, calcPostProductionQuality, calcCreativeGenreFit,
-  formatMoney, getQualityLabel,
+  formatMoney, getQualityLabel, calcParentBoost,
 } from '@/lib/gameLogic';
 import QualityMeter from '@/components/ui/QualityMeter';
 import { GENRE_PROFILES } from '@/data/genres';
@@ -13,6 +13,7 @@ interface Props {
   draft: ShowDraft;
   studioMoney: number;
   buildingBonuses?: { production?: number; postProduction?: number };
+  airedShows?: AiredShow[];
 }
 
 function ScoreBar({ label, score, color }: { label: string; score: number; color: string }) {
@@ -32,7 +33,7 @@ function ScoreBar({ label, score, color }: { label: string; score: number; color
   );
 }
 
-export default function ReviewStep({ draft, studioMoney, buildingBonuses }: Props) {
+export default function ReviewStep({ draft, studioMoney, buildingBonuses, airedShows }: Props) {
   const quality = calcShowQuality(draft, buildingBonuses);
   const epCost = calcEpisodeCost(draft);
   const seasonCost = epCost * draft.episodeCount;
@@ -45,6 +46,8 @@ export default function ReviewStep({ draft, studioMoney, buildingBonuses }: Prop
   const creativeQ = calcCreativeGenreFit(draft);
 
   const { color } = getQualityLabel(quality);
+  const parentBoost = airedShows ? calcParentBoost(draft, airedShows) : 0;
+  const parentShow = parentBoost > 0 && draft.parentShowId ? airedShows?.find(s => s.id === draft.parentShowId) : null;
 
   return (
     <div className="space-y-6">
@@ -78,6 +81,27 @@ export default function ReviewStep({ draft, studioMoney, buildingBonuses }: Prop
           </div>
         </div>
       </div>
+
+      {/* Parent Boost */}
+      {parentShow && (
+        <div className={`rounded-2xl p-4 border flex items-center gap-4 ${draft.showType === 'spinoff' ? 'bg-blue-950/30 border-blue-800/50' : 'bg-purple-950/30 border-purple-800/50'}`}>
+          <span className="text-3xl flex-shrink-0">{draft.showType === 'spinoff' ? '🔀' : '🔄'}</span>
+          <div className="flex-1">
+            <div className={`font-bold text-sm ${draft.showType === 'spinoff' ? 'text-blue-300' : 'text-purple-300'}`}>
+              {draft.showType === 'spinoff' ? 'Spin-off' : 'Reboot'} Bonus
+            </div>
+            <div className="text-xs text-zinc-400 mt-0.5">
+              Based on &quot;{parentShow.draft.title}&quot; (Q{parentShow.quality} · {parentShow.avgRating}M avg)
+            </div>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <div className={`text-xl font-black tabular-nums ${draft.showType === 'spinoff' ? 'text-blue-400' : 'text-purple-400'}`}>
+              +{Math.round(parentBoost * 100)}%
+            </div>
+            <div className="text-xs text-zinc-500">base rating</div>
+          </div>
+        </div>
+      )}
 
       {/* Cost Breakdown */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">

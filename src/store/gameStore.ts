@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   Studio, ShowDraft, NetworkDeal, GameScreen, Genre,
-  ActiveProduction, StudioBuilding, BuildingType, GameEvent,
+  ActiveProduction, StudioBuilding, BuildingType, GameEvent, CastMember,
 } from '@/types/game';
 import {
   createDefaultDraft, calcShowQuality,
   calcNetworkFit, calcNetworkOffer,
   getBuildingQualityBonuses, getBuildingCapacity,
+  calcParentBoost,
 } from '@/lib/gameLogic';
 import { advanceWeek as simulateWeek, calcBaseRating } from '@/lib/weekSimulation';
 import { NETWORKS } from '@/data/networks';
@@ -31,6 +32,8 @@ interface GameState {
   advanceWeek: () => void;
   buildBuilding: (type: BuildingType) => void;
   upgradeBuilding: (buildingId: string) => void;
+  startSpinoff: (airedShowId: string) => void;
+  startReboot: (airedShowId: string) => void;
   acceptRenewal: (offerId: string) => void;
   declineRenewal: (offerId: string) => void;
   markEventsRead: () => void;
@@ -128,7 +131,8 @@ export const useGameStore = create<GameState>()(
           releaseStrategy,
         };
 
-        const baseRating = calcBaseRating(quality, networkFit, network.reach);
+        const parentBoost = calcParentBoost(draft, studio.airedShows);
+        const baseRating = calcBaseRating(quality, networkFit, network.reach) * (1 + parentBoost);
 
         const production: ActiveProduction = {
           id: draft.id,
@@ -228,6 +232,66 @@ export const useGameStore = create<GameState>()(
         }
 
         set({ studio: updated });
+      },
+
+      startSpinoff: (airedShowId) => {
+        const { studio } = get();
+        if (!studio) return;
+        const parent = studio.airedShows.find((s) => s.id === airedShowId);
+        if (!parent) return;
+        const spinoffDraft: ShowDraft = {
+          ...createDefaultDraft(),
+          genre: parent.draft.genre,
+          episodeLength: parent.draft.episodeLength,
+          creativeIdentity: { ...parent.draft.creativeIdentity },
+          performanceRhythm: { ...parent.draft.performanceRhythm },
+          worldLook: { ...parent.draft.worldLook },
+          storytelling: { ...parent.draft.storytelling },
+          showType: 'spinoff',
+          parentShowId: airedShowId,
+          seasonNumber: 1,
+        };
+        set((s) => ({
+          screen: 'show-creator',
+          showCreatorStep: 0,
+          studio: s.studio ? { ...s.studio, currentDraft: spinoffDraft } : null,
+        }));
+      },
+
+      startReboot: (airedShowId) => {
+        const { studio } = get();
+        if (!studio) return;
+        const parent = studio.airedShows.find((s) => s.id === airedShowId);
+        if (!parent) return;
+        const talentPool = studio.talentPool ?? { cast: CAST_POOL, crew: CREW_POOL };
+        const returningMain = parent.draft.mainCast
+          .map((c) => talentPool.cast.find((lc) => lc.id === c.id && lc.status === 'available'))
+          .filter(Boolean) as CastMember[];
+        const returningSupporting = parent.draft.supportingCast
+          .map((c) => talentPool.cast.find((lc) => lc.id === c.id && lc.status === 'available'))
+          .filter(Boolean) as CastMember[];
+        const returningDirector = parent.draft.director
+          ? (talentPool.crew.find((c) => c.id === parent.draft.director?.id && c.status === 'available') ?? null)
+          : null;
+        const returningWriter = parent.draft.writer
+          ? (talentPool.crew.find((c) => c.id === parent.draft.writer?.id && c.status === 'available') ?? null)
+          : null;
+        const rebootDraft: ShowDraft = {
+          ...parent.draft,
+          id: crypto.randomUUID(),
+          seasonNumber: 1,
+          showType: 'reboot',
+          parentShowId: airedShowId,
+          mainCast: returningMain.slice(0, 5),
+          supportingCast: returningSupporting.slice(0, 10),
+          director: returningDirector,
+          writer: returningWriter,
+        };
+        set((s) => ({
+          screen: 'show-creator',
+          showCreatorStep: 0,
+          studio: s.studio ? { ...s.studio, currentDraft: rebootDraft } : null,
+        }));
       },
 
       acceptRenewal: (offerId) => {

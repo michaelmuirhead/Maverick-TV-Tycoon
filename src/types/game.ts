@@ -114,6 +114,7 @@ export interface ShowDraft {
   logline: string;
   seasonNumber: number;
   parentShowId?: string;
+  showType?: 'spinoff' | 'reboot';
   mainCast: CastMember[];
   supportingCast: CastMember[];
   director: CrewMember | null;

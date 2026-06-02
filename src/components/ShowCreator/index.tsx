@@ -95,12 +95,33 @@ export default function ShowCreator() {
 
       {/* Content */}
       <div className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {draft.showType && (() => {
+          const parent = studio.airedShows.find(s => s.id === draft.parentShowId);
+          if (!parent) return null;
+          const isSpinoff = draft.showType === 'spinoff';
+          return (
+            <div className={`mb-5 rounded-xl px-4 py-3 border flex items-center gap-3 ${isSpinoff ? 'bg-blue-950/40 border-blue-800/60' : 'bg-purple-950/40 border-purple-800/60'}`}>
+              <span className="text-2xl flex-shrink-0">{isSpinoff ? '🔀' : '🔄'}</span>
+              <div className="min-w-0">
+                <div className={`font-semibold text-sm ${isSpinoff ? 'text-blue-300' : 'text-purple-300'}`}>
+                  {isSpinoff ? 'Spin-off' : 'Reboot'} — based on &quot;{parent.draft.title}&quot;
+                </div>
+                <div className="text-xs text-zinc-400">
+                  S{parent.seasonNumber} · Avg {parent.avgRating}M viewers · Quality {parent.quality}
+                  <span className={`ml-2 font-semibold ${isSpinoff ? 'text-blue-400' : 'text-purple-400'}`}>
+                    +{Math.round((isSpinoff ? 0.05 + (parent.quality / 100) * 0.15 : (parent.status === 'completed' ? 0.05 : 0) + (parent.quality / 100) * 0.20) * 100)}% base rating boost
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         {step === 0 && <BasicInfo draft={draft} onUpdate={updateDraft} />}
         {step === 1 && <CastCrew draft={draft} onUpdate={updateDraft} />}
         {step === 2 && <ProductionBudgetStep draft={draft} onUpdate={updateDraft} />}
         {step === 3 && <PostProductionStep draft={draft} onUpdate={updateDraft} />}
         {step === 4 && <CreativeSliders draft={draft} onUpdate={updateDraft} />}
-        {step === 5 && <ReviewStep draft={draft} studioMoney={studio.money} buildingBonuses={buildingBonuses} />}
+        {step === 5 && <ReviewStep draft={draft} studioMoney={studio.money} buildingBonuses={buildingBonuses} airedShows={studio.airedShows} />}
       </div>
 
       {/* Footer Nav */}
