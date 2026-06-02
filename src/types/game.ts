@@ -167,6 +167,7 @@ export interface ActiveProduction {
   startYear: number;
   hypeLevel?: number;
   marketingSpend?: number;
+  wasReshot?: boolean;
 }
 
 export interface RenewalOffer {

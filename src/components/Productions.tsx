@@ -78,7 +78,7 @@ const MARKETING_TIERS = [
 
 function ActiveProductionCard({ prod }: { prod: ActiveProduction }) {
   const addMarketing = useGameStore(s => s.addMarketing);
-  const reshootEpisode = useGameStore(s => s.reshootEpisode);
+  const reshootProduction = useGameStore(s => s.reshootProduction);
   const studio = useGameStore(s => s.studio);
   const genre = GENRE_PROFILES[prod.draft.genre];
   const network = NETWORKS.find(n => n.id === prod.deal.networkId);
@@ -96,13 +96,11 @@ function ActiveProductionCard({ prod }: { prod: ActiveProduction }) {
     ? Math.round(episodesWithScores.reduce((s, e) => s + (e.audienceScore ?? 0), 0) / episodesWithScores.length)
     : null;
 
-  const lastEp = prod.episodeResults.at(-1);
-  const lastEpIdx = prod.episodeResults.length - 1;
-  const reshootable = prod.status === 'airing' && lastEp && !lastEp.wasReshot && lastEp.rating < prod.baseRating * 0.8;
+  const reshootable = prod.status === 'in-production' && !prod.wasReshot;
   const reshootCost = Math.round(
     ([...prod.draft.mainCast, ...prod.draft.supportingCast].reduce((s, c) => s + c.weeklyFee, 0) +
      (prod.draft.director?.episodeFee ?? 0) + (prod.draft.writer?.episodeFee ?? 0) +
-     Object.values(prod.draft.production).reduce((s, v) => s + v, 0)) * 0.4
+     Object.values(prod.draft.production).reduce((s, v) => s + v, 0)) * 0.5
   );
 
   const hype = prod.hypeLevel ?? 0;
@@ -212,17 +210,17 @@ function ActiveProductionCard({ prod }: { prod: ActiveProduction }) {
         </div>
       )}
 
-      {/* Reshoot — only when airing and last episode was weak */}
+      {/* Reshoot — only available before the season airs */}
       {reshootable && (
         <div className="pt-3 border-t border-zinc-800">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs font-semibold text-zinc-300">🎞️ Reshoot Episode {lastEp!.episode}</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Episode underperformed. Reshooting improves scores & boosts next ep.</div>
+              <div className="text-xs font-semibold text-zinc-300">🎞️ Order Reshoots</div>
+              <div className="text-xs text-zinc-500 mt-0.5">Fix weak scenes before the season airs. +5 quality · one-time.</div>
             </div>
             <button
               disabled={!studio || studio.money < reshootCost}
-              onClick={() => reshootEpisode(prod.id, lastEpIdx)}
+              onClick={() => reshootProduction(prod.id)}
               className="ml-3 px-3 py-1.5 bg-amber-900/40 hover:bg-amber-800/60 border border-amber-800/60 text-amber-300 font-semibold text-xs rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
             >
               Reshoot · {formatMoney(reshootCost)}

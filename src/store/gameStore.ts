@@ -35,7 +35,7 @@ interface GameState {
   startSpinoff: (airedShowId: string) => void;
   startReboot: (airedShowId: string) => void;
   addMarketing: (productionId: string, spend: number, hypeGain: number) => void;
-  reshootEpisode: (productionId: string, episodeIndex: number) => void;
+  reshootProduction: (productionId: string) => void;
   negotiateRenewal: (offerId: string, proposedPayPerEpisode: number) => void;
   acceptRenewal: (offerId: string) => void;
   declineRenewal: (offerId: string) => void;
@@ -313,34 +313,30 @@ export const useGameStore = create<GameState>()(
         }));
       },
 
-      reshootEpisode: (productionId, episodeIndex) => {
+      reshootProduction: (productionId) => {
         const { studio } = get();
         if (!studio) return;
         const prod = studio.activeProductions.find(p => p.id === productionId);
-        if (!prod) return;
+        if (!prod || prod.status !== 'in-production' || prod.wasReshot) return;
         const reshootCost = Math.round(
           ([...prod.draft.mainCast, ...prod.draft.supportingCast].reduce((s, c) => s + c.weeklyFee, 0) +
            (prod.draft.director?.episodeFee ?? 0) + (prod.draft.writer?.episodeFee ?? 0) +
-           Object.values(prod.draft.production).reduce((s, v) => s + v, 0)) * 0.4
+           Object.values(prod.draft.production).reduce((s, v) => s + v, 0)) * 0.5
         );
         if (studio.money < reshootCost) return;
+        const qualityBoost = 5;
+        const newQuality = Math.min(95, prod.quality + qualityBoost);
+        const network = NETWORKS.find(n => n.id === prod.deal.networkId);
+        const newBaseRating = network
+          ? calcBaseRating(newQuality, prod.networkFit, network.reach) * (1 + (prod.hypeLevel ?? 0) / 100 * 0.25)
+          : prod.baseRating;
         set((s) => ({
           studio: s.studio ? {
             ...s.studio,
             money: s.studio.money - reshootCost,
-            activeProductions: s.studio.activeProductions.map(p => {
-              if (p.id !== productionId) return p;
-              const results = p.episodeResults.map((ep, idx) => {
-                if (idx !== episodeIndex) return ep;
-                return {
-                  ...ep,
-                  wasReshot: true,
-                  criticScore: ep.criticScore !== undefined ? Math.min(100, ep.criticScore + 10 + Math.round(Math.random() * 12)) : ep.criticScore,
-                  audienceScore: ep.audienceScore !== undefined ? Math.min(100, ep.audienceScore + 8 + Math.round(Math.random() * 10)) : ep.audienceScore,
-                };
-              });
-              return { ...p, episodeResults: results, ratingsModifier: Math.min(0.4, p.ratingsModifier + 0.07) };
-            }),
+            activeProductions: s.studio.activeProductions.map(p =>
+              p.id !== productionId ? p : { ...p, quality: newQuality, baseRating: newBaseRating, wasReshot: true }
+            ),
           } : null,
         }));
       },
