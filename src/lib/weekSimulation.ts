@@ -366,18 +366,39 @@ export function advanceWeek(studio: Studio): WeekResult {
   activeProductions = activeProductions.map(prod => {
     if (prod.status !== 'airing') return prod;
 
+    // Binge drop: air all remaining episodes at once with a premiere-buzz boost
+    if (prod.deal.releaseStrategy === 'all-at-once') {
+      const buzzBoost = 1.10;
+      const updatedResults = [...prod.episodeResults];
+      const boostedProd = { ...prod, baseRating: prod.baseRating * buzzBoost };
+
+      for (let i = prod.currentEpisode; i < prod.totalEpisodes; i++) {
+        const epRating = calcEpisodeRating(boostedProd, i);
+        money -= calcEpisodeCost(prod.draft);
+        money += prod.deal.payPerEpisode;
+        updatedResults.push({ episode: i + 1, rating: epRating });
+      }
+
+      const dropRating = updatedResults.at(-1)?.rating ?? prod.baseRating;
+      const event = maybeGenerateEvent(prod, prod.totalEpisodes, dropRating, newWeek, newYear);
+      if (event) {
+        newEvents.push(event);
+        if (event.impact?.money) money += event.impact.money;
+        if (event.impact?.reputation) reputation += event.impact.reputation;
+      }
+
+      return { ...prod, currentEpisode: prod.totalEpisodes, episodeResults: updatedResults, status: 'completed' as const, ratingsModifier: 0 };
+    }
+
+    // Weekly release: one episode per advance-week
     const epNum = prod.currentEpisode + 1;
     const epRating = calcEpisodeRating(prod, epNum);
     const epResult = { episode: epNum, rating: epRating };
 
-    // Deduct per-episode cost
     const epCost = calcEpisodeCost(prod.draft);
     money -= epCost;
-
-    // Revenue comes in per episode
     money += prod.deal.payPerEpisode;
 
-    // Maybe generate event
     const event = maybeGenerateEvent(prod, epNum, epRating, newWeek, newYear);
     if (event) {
       newEvents.push(event);

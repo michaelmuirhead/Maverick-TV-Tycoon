@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { ShowDraft } from '@/types/game';
-import { GENRES } from '@/data/genres';
+import { GENRES, GENRE_PROFILES } from '@/data/genres';
 
 interface Props {
   draft: ShowDraft;
@@ -14,7 +14,37 @@ const EP_LENGTHS = [
   { value: 60, label: '60 min', sublabel: 'Feature-length' },
 ] as const;
 
+// Scheduling hints for high-frequency genres
+const SCHEDULE_HINTS: Partial<Record<string, string>> = {
+  'talk-show': '26 = weekly · 130 = 2.5×/wk · 260 = daily M–F',
+  'late-night': '26 = weekly · 130 = 2.5×/wk · 260 = nightly M–F',
+  'soap-opera': '52 = once/wk · 130 = 2.5×/wk · 260 = daily M–F',
+};
+
+function epCountStep(max: number) {
+  if (max <= 26) return 1;
+  if (max <= 60) return 2;
+  return 5;
+}
+
 export default function BasicInfo({ draft, onUpdate }: Props) {
+  const genreProfile = GENRE_PROFILES[draft.genre];
+  const [epMin, epMax] = genreProfile.typicalEpisodeCount;
+  const step = epCountStep(epMax);
+
+  const handleGenreChange = (genreId: typeof draft.genre) => {
+    const newProfile = GENRE_PROFILES[genreId];
+    const [newMin, newMax] = newProfile.typicalEpisodeCount;
+    const defaultCount = Math.round((newMin + newMax) / 2 / step) * step;
+    const clampedCount = Math.max(newMin, Math.min(newMax, draft.episodeCount));
+    // If current count is way outside the new genre's range, reset to midpoint
+    const newCount = (draft.episodeCount < newMin || draft.episodeCount > newMax) ? defaultCount : clampedCount;
+    onUpdate({ genre: genreId, episodeCount: newCount });
+  };
+
+  const progressPct = epMax > epMin ? ((draft.episodeCount - epMin) / (epMax - epMin)) * 100 : 50;
+  const scheduleHint = SCHEDULE_HINTS[draft.genre];
+
   return (
     <div className="space-y-8">
       {/* Title */}
@@ -50,7 +80,7 @@ export default function BasicInfo({ draft, onUpdate }: Props) {
           {GENRES.map((g) => (
             <button
               key={g.id}
-              onClick={() => onUpdate({ genre: g.id })}
+              onClick={() => handleGenreChange(g.id)}
               className={`flex flex-col items-center gap-1 p-3 rounded-xl border text-xs font-medium transition-all duration-150 ${
                 draft.genre === g.id
                   ? 'bg-amber-500/20 border-amber-500 text-amber-300'
@@ -94,18 +124,26 @@ export default function BasicInfo({ draft, onUpdate }: Props) {
         </div>
         <div className="relative">
           <div className="h-2 rounded-full bg-zinc-700 overflow-hidden">
-            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${((draft.episodeCount - 4) / 22) * 100}%` }} />
+            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.max(1, progressPct)}%` }} />
           </div>
           <input
-            type="range" min={4} max={26} step={1} value={draft.episodeCount}
+            type="range"
+            min={epMin}
+            max={epMax}
+            step={step}
+            value={draft.episodeCount}
             onChange={(e) => onUpdate({ episodeCount: Number(e.target.value) })}
             className="absolute inset-0 w-full opacity-0 cursor-pointer h-2"
           />
         </div>
         <div className="flex justify-between text-xs text-zinc-600 mt-1">
-          <span>4 eps (Mini-series)</span>
-          <span>26 eps (Full season)</span>
+          <span>{epMin} eps</span>
+          {scheduleHint && <span className="text-zinc-600 text-center hidden md:block">{scheduleHint}</span>}
+          <span>{epMax} eps</span>
         </div>
+        {scheduleHint && (
+          <p className="text-xs text-zinc-600 mt-1 md:hidden">{scheduleHint}</p>
+        )}
       </div>
     </div>
   );

@@ -22,7 +22,7 @@ interface GameState {
   setShowCreatorStep: (step: number) => void;
   updateDraft: (updates: Partial<ShowDraft>) => void;
   resetDraft: () => void;
-  pitchShow: (networkId: string) => void;
+  pitchShow: (networkId: string, releaseStrategy?: 'weekly' | 'all-at-once') => void;
   advanceWeek: () => void;
   acceptRenewal: (offerId: string) => void;
   declineRenewal: (offerId: string) => void;
@@ -83,7 +83,7 @@ export const useGameStore = create<GameState>()(
           showCreatorStep: 0,
         })),
 
-      pitchShow: (networkId) => {
+      pitchShow: (networkId, releaseStrategy = 'weekly') => {
         const { studio } = get();
         if (!studio?.currentDraft) return;
 
@@ -103,6 +103,7 @@ export const useGameStore = create<GameState>()(
           payPerEpisode,
           marketingBudget: Math.round(totalOffer * 0.08),
           seasonNumber: draft.seasonNumber,
+          releaseStrategy,
         };
 
         const baseRating = calcBaseRating(quality, networkFit, network.reach);
