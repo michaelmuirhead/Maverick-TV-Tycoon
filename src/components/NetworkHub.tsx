@@ -55,6 +55,7 @@ export default function NetworkHub() {
   const airedShows = studio.airedShows;
   const networkReachModifiers = studio.networkReachModifiers ?? {};
   const revivalBoost = draft.isRevival ? calcRevivalBoost(draft, airedShows) : 0;
+  const pitchBonus = ({ 'nearly-impossible': -22, slim: -10, fair: 0, good: 10, slapping: 22 } as Record<string, number>)[studio.settings?.pitchingChances ?? 'fair'] ?? 0;
 
   const filtered = (filter === 'all' ? NETWORKS : NETWORKS.filter((n) => n.type === filter))
     .filter(n => !draft.isRevival || n.id !== draft.originalNetworkId);
@@ -191,6 +192,7 @@ export default function NetworkHub() {
                   onPitch={() => handlePitch(network.id)}
                   pitchDisabled={!hasCapacity}
                   reachModifier={networkReachModifiers[network.id] ?? 0}
+                  pitchBonus={pitchBonus}
                 />
                 {isPlayerChoice && (
                   <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1">

@@ -295,6 +295,28 @@ export interface Network {
   country?: string;
 }
 
+export interface GameSettings {
+  unlimitedMoney: boolean;
+  bankruptcyThreshold: number;
+  startingCapital: number;
+  episodeBudgets: 'stingy' | 'cautious' | 'fair' | 'trusting' | 'generous';
+  aiEfficiency: 'super' | 'high' | 'average' | 'poor' | 'terrible';
+  productionCosts: 'lavish' | 'expensive' | 'affordable' | 'cheap' | 'bargain';
+  pitchingChances: 'nearly-impossible' | 'slim' | 'fair' | 'good' | 'slapping';
+  viewership: 'meagre' | 'modest' | 'normal' | 'ample' | 'abundant';
+}
+
+export const DEFAULT_GAME_SETTINGS: GameSettings = {
+  unlimitedMoney: false,
+  bankruptcyThreshold: 0,
+  startingCapital: 10_000_000,
+  episodeBudgets: 'fair',
+  aiEfficiency: 'average',
+  productionCosts: 'affordable',
+  pitchingChances: 'fair',
+  viewership: 'normal',
+};
+
 export interface Studio {
   name: string;
   playerName?: string;
@@ -323,4 +345,5 @@ export interface Studio {
   buildings?: StudioBuilding[];
   talentPool?: { cast: CastMember[]; crew: CrewMember[] };
   lastSuccessfulDraft?: ShowDraft;
+  settings?: GameSettings;
 }

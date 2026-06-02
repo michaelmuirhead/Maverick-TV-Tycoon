@@ -4,10 +4,11 @@ import { useGameStore } from '@/store/gameStore';
 import { CastMember, CrewMember } from '@/types/game';
 import { CAST_POOL, CREW_POOL } from '@/data/castPool';
 import { formatMoney } from '@/lib/gameLogic';
-
-const DEV_SIGNUP_FEE = 50_000;
+import TalentProfileModal, { Talent } from '@/components/TalentProfileModal';
 
 type Tab = 'cast' | 'crew';
+
+const DEV_SIGNUP_FEE = 50_000;
 
 function StarRating({ level }: { level: number }) {
   return <span className="text-xs">{'⭐'.repeat(level)}</span>;
@@ -37,14 +38,20 @@ function CareerBadge({ phase, age }: { phase?: string; age?: number }) {
   );
 }
 
-function CastCard({ member, onDevelop, canDevelop }: { member: CastMember; onDevelop?: () => void; canDevelop?: boolean }) {
+function CastCard({ member, onDevelop, canDevelop, onProfile }: { member: CastMember; onDevelop?: () => void; canDevelop?: boolean; onProfile: () => void }) {
   const badge = STATUS_BADGE[member.status] ?? STATUS_BADGE.available;
   const showDevelopBtn = member.status === 'available' && member.starLevel <= 2 && onDevelop;
   return (
-    <div className={`bg-zinc-900 border rounded-xl p-4 transition-all ${member.status === 'available' ? 'border-zinc-800 hover:border-zinc-600' : 'border-zinc-800 opacity-70'}`}>
+    <div
+      onClick={onProfile}
+      className={`bg-zinc-900 border rounded-xl p-4 transition-all cursor-pointer ${member.status === 'available' ? 'border-zinc-800 hover:border-zinc-600' : 'border-zinc-800 opacity-70 hover:opacity-100'}`}
+    >
       <div className="flex justify-between items-start mb-1.5">
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-white text-sm truncate">{member.name}</div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-white text-sm truncate">{member.name}</span>
+            <span className="text-xs text-zinc-600 flex-shrink-0">👤</span>
+          </div>
           <StarRating level={member.starLevel} />
         </div>
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${badge.color}`}>{badge.label}</span>
@@ -61,7 +68,7 @@ function CastCard({ member, onDevelop, canDevelop }: { member: CastMember; onDev
         <div className="text-xs text-zinc-500">Fee: <span className="font-bold text-zinc-300 tabular-nums">{formatMoney(member.weeklyFee)}/episode</span></div>
         {showDevelopBtn && (
           <button
-            onClick={onDevelop}
+            onClick={e => { e.stopPropagation(); onDevelop!(); }}
             disabled={!canDevelop}
             className="text-xs px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/60 border border-emerald-700/60 text-emerald-300 font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             title={`Sign to development for ${formatMoney(DEV_SIGNUP_FEE)}`}
@@ -74,13 +81,19 @@ function CastCard({ member, onDevelop, canDevelop }: { member: CastMember; onDev
   );
 }
 
-function CrewCard({ member }: { member: CrewMember }) {
+function CrewCard({ member, onProfile }: { member: CrewMember; onProfile: () => void }) {
   const badge = STATUS_BADGE[member.status] ?? STATUS_BADGE.available;
   return (
-    <div className={`bg-zinc-900 border rounded-xl p-4 transition-all ${member.status === 'available' ? 'border-zinc-800 hover:border-zinc-600' : 'border-zinc-800 opacity-70'}`}>
+    <div
+      onClick={onProfile}
+      className={`bg-zinc-900 border rounded-xl p-4 transition-all cursor-pointer ${member.status === 'available' ? 'border-zinc-800 hover:border-zinc-600' : 'border-zinc-800 opacity-70 hover:opacity-100'}`}
+    >
       <div className="flex justify-between items-start mb-1.5">
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-white text-sm truncate">{member.name}</div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-white text-sm truncate">{member.name}</span>
+            <span className="text-xs text-zinc-600 flex-shrink-0">👤</span>
+          </div>
           <span className="text-xs text-zinc-500 capitalize">{member.role}</span>
         </div>
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${badge.color}`}>{badge.label}</span>
@@ -112,6 +125,7 @@ export default function TalentMarket() {
   const spendMoney = useGameStore(s => s.spendMoney);
   const [tab, setTab] = useState<Tab>('cast');
   const [starFilter, setStarFilter] = useState<number | null>(null);
+  const [profileTalent, setProfileTalent] = useState<Talent | null>(null);
 
   if (!studio) return null;
 
@@ -140,6 +154,7 @@ export default function TalentMarket() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
+      {profileTalent && <TalentProfileModal talent={profileTalent} onClose={() => setProfileTalent(null)} />}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -213,6 +228,7 @@ export default function TalentMarket() {
                 <CastCard
                   key={c.id}
                   member={c}
+                  onProfile={() => setProfileTalent(c)}
                   onDevelop={c.status === 'available' && c.starLevel <= 2 ? () => {
                     spendMoney(DEV_SIGNUP_FEE);
                     signToDevelopment(c.id);
@@ -220,7 +236,7 @@ export default function TalentMarket() {
                   canDevelop={studio.money >= DEV_SIGNUP_FEE}
                 />
               ))
-            : filteredCrew.map(c => <CrewCard key={c.id} member={c} />)
+            : filteredCrew.map(c => <CrewCard key={c.id} member={c} onProfile={() => setProfileTalent(c)} />)
           }
         </div>
       </div>

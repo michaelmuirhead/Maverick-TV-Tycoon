@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import {
   Studio, ShowDraft, NetworkDeal, GameScreen, Genre,
   ActiveProduction, StudioBuilding, BuildingType, GameEvent, CastMember,
+  GameSettings, DEFAULT_GAME_SETTINGS,
 } from '@/types/game';
 import {
   createDefaultDraft, calcShowQuality,
@@ -23,7 +24,7 @@ interface GameState {
   studio: Studio | null;
   showCreatorStep: number;
 
-  startGame: (studioName: string, specialty: Genre, playerName?: string) => void;
+  startGame: (studioName: string, specialty: Genre, playerName?: string, settings?: GameSettings) => void;
   setScreen: (screen: GameScreen) => void;
   setShowCreatorStep: (step: number) => void;
   updateDraft: (updates: Partial<ShowDraft>) => void;
@@ -61,7 +62,8 @@ export const useGameStore = create<GameState>()(
       studio: null,
       showCreatorStep: 0,
 
-      startGame: (studioName, specialty, playerName) => {
+      startGame: (studioName, specialty, playerName, settings) => {
+        const gs = settings ?? DEFAULT_GAME_SETTINGS;
         const initialPopularity = Object.fromEntries(
           Object.keys(GENRE_PROFILES).map(g => [g, 50 + Math.round((Math.random() - 0.5) * 20)])
         );
@@ -72,7 +74,8 @@ export const useGameStore = create<GameState>()(
             name: studioName,
             playerName: playerName?.trim() || undefined,
             specialty,
-            money: STARTING_MONEY,
+            money: gs.startingCapital,
+            settings: gs,
             reputation: 20,
             week: 1,
             year: 1,
@@ -135,7 +138,8 @@ export const useGameStore = create<GameState>()(
         const quality = calcShowQuality(draft, buildingBonuses);
         const networkFit = calcNetworkFit(draft, network);
         const totalOffer = calcNetworkOffer(quality, networkFit, network, draft.episodeCount);
-        const payPerEpisode = Math.round(totalOffer / draft.episodeCount);
+        const budgetMult = { stingy: 0.45, cautious: 0.70, fair: 1.00, trusting: 1.35, generous: 1.75 }[studio.settings?.episodeBudgets ?? 'fair'] ?? 1.00;
+        const payPerEpisode = Math.round((totalOffer / draft.episodeCount) * budgetMult);
 
         const deal: NetworkDeal = {
           networkId,
