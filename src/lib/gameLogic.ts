@@ -194,6 +194,7 @@ export function createDefaultDraft(): ShowDraft {
     episodeLength: 44,
     episodeCount: 10,
     logline: '',
+    seasonNumber: 1,
     mainCast: [],
     supportingCast: [],
     director: null,

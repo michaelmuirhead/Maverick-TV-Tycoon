@@ -9,13 +9,24 @@ export default function Dashboard() {
   const setScreen = useGameStore((s) => s.setScreen);
   const resetDraft = useGameStore((s) => s.resetDraft);
   const resetGame = useGameStore((s) => s.resetGame);
+  const advanceWeek = useGameStore((s) => s.advanceWeek);
+  const markEventsRead = useGameStore((s) => s.markEventsRead);
 
   if (!studio) return null;
 
   const genre = GENRE_PROFILES[studio.specialty];
-  const profitColor = studio.money >= 10_000_000 ? 'text-emerald-400' : studio.money >= 5_000_000 ? 'text-amber-400' : studio.money < 0 ? 'text-rose-400' : 'text-zinc-300';
+  const profitColor = studio.money >= 5_000_000 ? 'text-emerald-400' : studio.money >= 0 ? 'text-amber-400' : 'text-rose-400';
+  const unreadCount = studio.events.filter(e => !e.isRead).length;
+  const renewalCount = studio.renewalOffers.length;
+  const activeAiringCount = studio.activeProductions.filter(p => p.status === 'airing').length;
+  const activeInProdCount = studio.activeProductions.filter(p => p.status === 'in-production').length;
 
-  const repBar = Math.min(100, Math.max(0, studio.reputation));
+  const eventTypeIcon: Record<string, string> = {
+    'ratings-spike': '📈', 'ratings-drop': '📉', 'viral-moment': '🔥',
+    'scandal': '💥', 'critical-acclaim': '⭐', 'production-issue': '⚠️',
+    'award-nomination': '🎬', 'award-win': '🏆', 'renewal-offer': '📋',
+    'cancellation': '❌', 'talent-news': '🎭', 'rival-news': '📡', 'financial': '💰',
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -27,19 +38,22 @@ export default function Dashboard() {
             <div>
               <h1 className="font-black text-lg text-white">{studio.name}</h1>
               <p className="text-xs text-zinc-500">
-                {genre.emoji} {genre.label} Studio &bull; Year {studio.year}, Week {studio.week}
+                {genre.emoji} {genre.label} · Year {studio.year}, Week {studio.week}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden md:block">
               <div className={`text-xl font-bold tabular-nums ${profitColor}`}>{formatMoney(studio.money)}</div>
               <div className="text-xs text-zinc-500">Available Funds</div>
             </div>
             <button
-              onClick={resetGame}
-              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800"
+              onClick={() => { advanceWeek(); }}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
             >
+              <span>⏭</span> Advance Week
+            </button>
+            <button onClick={resetGame} className="text-xs text-zinc-600 hover:text-zinc-400 px-2 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors">
               New Game
             </button>
           </div>
@@ -47,101 +61,80 @@ export default function Dashboard() {
       </header>
 
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">💰 Treasury</div>
-            <div className={`text-2xl font-bold tabular-nums ${profitColor}`}>{formatMoney(studio.money)}</div>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">⭐ Reputation</div>
-            <div className="text-2xl font-bold text-purple-400">{studio.reputation}</div>
-            <div className="mt-2 h-1.5 rounded-full bg-zinc-700 overflow-hidden">
-              <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${repBar}%` }} />
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[
+            { label: '💰 Treasury', val: formatMoney(studio.money), color: profitColor },
+            { label: '⭐ Reputation', val: `${studio.reputation}/100`, color: 'text-purple-400' },
+            { label: '📺 Shows', val: studio.totalShows, color: 'text-blue-400' },
+            { label: '🏆 Awards', val: studio.awardsWon, color: 'text-amber-400' },
+            { label: '🎬 On Air', val: activeAiringCount + activeInProdCount, color: 'text-emerald-400' },
+          ].map((s) => (
+            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+              <div className="text-xs text-zinc-500 mb-1">{s.label}</div>
+              <div className={`text-xl font-bold tabular-nums ${s.color}`}>{s.val}</div>
             </div>
+          ))}
+        </div>
+
+        {/* Reputation bar */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex justify-between text-xs text-zinc-500 mb-2">
+            <span>Studio Reputation</span><span>{studio.reputation}/100</span>
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">📺 Shows Made</div>
-            <div className="text-2xl font-bold text-blue-400">{studio.totalShows}</div>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">🏆 Awards Won</div>
-            <div className="text-2xl font-bold text-amber-400">{studio.awardsWon}</div>
+          <div className="h-2 rounded-full bg-zinc-700 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-purple-600 to-purple-400 transition-all duration-700"
+              style={{ width: `${studio.reputation}%` }}
+            />
           </div>
         </div>
 
-        {/* Action Cards */}
-        <div>
-          <h2 className="text-lg font-bold text-white mb-4">What do you want to do?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              onClick={() => { resetDraft(); setScreen('show-creator'); }}
-              className="bg-gradient-to-br from-amber-900/40 to-amber-800/20 border border-amber-700/50 hover:border-amber-500 rounded-2xl p-6 text-left transition-all duration-200 group"
-            >
-              <div className="text-3xl mb-3">🎬</div>
-              <div className="font-bold text-lg text-white group-hover:text-amber-300 transition-colors">Create New Show</div>
-              <div className="text-sm text-zinc-500 mt-1">Develop your next production from scratch</div>
-            </button>
-
-            <button
-              onClick={() => setScreen('network-hub')}
-              disabled={!studio.currentDraft?.title}
-              className={`rounded-2xl p-6 text-left transition-all duration-200 group border ${
-                studio.currentDraft?.title
-                  ? 'bg-gradient-to-br from-blue-900/40 to-blue-800/20 border-blue-700/50 hover:border-blue-500'
-                  : 'bg-zinc-900/50 border-zinc-800 opacity-50 cursor-not-allowed'
-              }`}
-            >
-              <div className="text-3xl mb-3">📡</div>
-              <div className="font-bold text-lg text-white group-hover:text-blue-300 transition-colors">Pitch to Networks</div>
-              <div className="text-sm text-zinc-500 mt-1">
-                {studio.currentDraft?.title
-                  ? `Ready: "${studio.currentDraft.title}"`
-                  : 'Create a show first'}
+        {/* Renewal Offers Banner */}
+        {renewalCount > 0 && (
+          <div
+            onClick={() => setScreen('productions')}
+            className="bg-emerald-900/30 border border-emerald-700 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-emerald-500 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📋</span>
+              <div>
+                <div className="font-bold text-emerald-300">{renewalCount} Renewal Offer{renewalCount > 1 ? 's' : ''} Waiting</div>
+                <div className="text-xs text-emerald-600">Networks want to order more episodes</div>
               </div>
-            </button>
-
-            <button
-              onClick={() => setScreen('productions')}
-              className="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border border-emerald-700/50 hover:border-emerald-500 rounded-2xl p-6 text-left transition-all duration-200 group"
-            >
-              <div className="text-3xl mb-3">📊</div>
-              <div className="font-bold text-lg text-white group-hover:text-emerald-300 transition-colors">Productions</div>
-              <div className="text-sm text-zinc-500 mt-1">
-                {studio.airedShows.length > 0 ? `${studio.airedShows.length} show${studio.airedShows.length > 1 ? 's' : ''} in the books` : 'No shows yet'}
-              </div>
-            </button>
+            </div>
+            <span className="text-emerald-400 text-sm font-bold">View →</span>
           </div>
-        </div>
+        )}
 
-        {/* Recent Shows */}
-        {studio.airedShows.length > 0 && (
-          <div>
-            <h2 className="text-lg font-bold text-white mb-4">Recent Shows</h2>
-            <div className="space-y-3">
-              {[...studio.airedShows].reverse().slice(0, 3).map((show) => {
-                const statusColor = {
-                  renewed: 'text-emerald-400 bg-emerald-900/30 border-emerald-800',
-                  completed: 'text-blue-400 bg-blue-900/30 border-blue-800',
-                  cancelled: 'text-rose-400 bg-rose-900/30 border-rose-800',
-                  airing: 'text-amber-400 bg-amber-900/30 border-amber-800',
-                }[show.status];
-                const profitSign = show.profit >= 0 ? '+' : '';
-                const pColor = show.profit >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        {/* Active Productions Summary */}
+        {studio.activeProductions.length > 0 && (
+          <div
+            onClick={() => setScreen('productions')}
+            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-xl p-4 cursor-pointer transition-colors"
+          >
+            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Currently On Air</h3>
+            <div className="space-y-2">
+              {studio.activeProductions.slice(0, 3).map(prod => {
+                const g = GENRE_PROFILES[prod.draft.genre];
+                const progressPct = prod.totalEpisodes > 0 ? (prod.currentEpisode / prod.totalEpisodes) * 100 : 0;
+                const latestRating = prod.episodeResults.at(-1)?.rating;
                 return (
-                  <div key={show.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{GENRE_PROFILES[show.draft.genre].emoji}</span>
-                      <div>
-                        <div className="font-semibold text-white">{show.draft.title}</div>
-                        <div className="text-xs text-zinc-500">
-                          {GENRE_PROFILES[show.draft.genre].label} &bull; {show.draft.episodeCount} eps &bull; Avg Rating: {show.avgRating}M
+                  <div key={prod.id} className="flex items-center gap-3">
+                    <span className="text-lg">{g.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-white truncate">{prod.draft.title}</span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {latestRating && <span className="text-xs text-amber-400 tabular-nums">{latestRating}M</span>}
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            prod.status === 'airing' ? 'bg-green-900/50 text-green-400' : 'bg-zinc-700 text-zinc-400'
+                          }`}>{prod.status === 'in-production' ? `🎥 ${prod.productionWeeks}w` : `Ep ${prod.currentEpisode}/${prod.totalEpisodes}`}</span>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className={`text-sm font-bold ${pColor}`}>{profitSign}{formatMoney(show.profit)}</div>
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full border capitalize ${statusColor}`}>{show.status}</span>
+                      <div className="mt-1 h-1 rounded-full bg-zinc-700 overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full" style={{ width: `${progressPct}%` }} />
+                      </div>
                     </div>
                   </div>
                 );
@@ -150,11 +143,83 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Empty state */}
-        {studio.airedShows.length === 0 && studio.totalShows === 0 && (
-          <div className="text-center py-12 text-zinc-600">
-            <div className="text-4xl mb-3">🎥</div>
-            <p className="text-base font-medium text-zinc-500">Your studio is empty. Create your first show!</p>
+        {/* Action Cards */}
+        <div>
+          <h2 className="text-base font-bold text-white mb-3">Studio Actions</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[
+              { emoji: '🎬', label: 'Create Show', sub: 'Develop new content', screen: 'show-creator' as const, accent: 'amber', action: () => { resetDraft(); setScreen('show-creator'); } },
+              { emoji: '📡', label: 'Pitch to Networks', sub: studio.currentDraft?.title ? `Ready: "${studio.currentDraft.title}"` : 'Create a show first', screen: 'network-hub' as const, accent: 'blue', disabled: !studio.currentDraft?.title, action: () => setScreen('network-hub') },
+              { emoji: '📊', label: 'Productions', sub: `${studio.activeProductions.length} active`, screen: 'productions' as const, accent: 'emerald', action: () => setScreen('productions') },
+              { emoji: '🎭', label: 'Talent Market', sub: 'Hire cast & crew', screen: 'talent-market' as const, accent: 'purple', action: () => setScreen('talent-market') },
+              { emoji: '🏆', label: 'Awards', sub: `${studio.awardNominations.length} nominations`, screen: 'awards' as const, accent: 'yellow', action: () => setScreen('awards') },
+              { emoji: '🏢', label: 'Rivals', sub: `${studio.rivalStudios.length} competitors`, screen: 'rivals' as const, accent: 'rose', action: () => setScreen('rivals') },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={item.action}
+                disabled={item.disabled}
+                className={`rounded-xl p-4 text-left transition-all duration-150 group border ${
+                  item.disabled
+                    ? 'bg-zinc-900/40 border-zinc-800 opacity-50 cursor-not-allowed'
+                    : 'bg-zinc-900 border-zinc-800 hover:border-zinc-600 active:scale-95'
+                }`}
+              >
+                <div className="text-2xl mb-2">{item.emoji}</div>
+                <div className="font-bold text-sm text-white">{item.label}</div>
+                <div className="text-xs text-zinc-500 mt-0.5">{item.sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Events Feed */}
+        {studio.events.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                📰 Latest News
+                {unreadCount > 0 && (
+                  <span className="bg-amber-500 text-black text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
+                )}
+              </h2>
+              {unreadCount > 0 && (
+                <button onClick={markEventsRead} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                  Mark all read
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              {studio.events.slice(0, 8).map((event) => (
+                <div
+                  key={event.id}
+                  className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
+                    !event.isRead ? 'bg-zinc-900 border-zinc-700' : 'bg-zinc-900/50 border-zinc-800 opacity-70'
+                  }`}
+                >
+                  <span className="text-lg flex-shrink-0 mt-0.5">{eventTypeIcon[event.type] ?? '📌'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm text-white">{event.headline}</div>
+                    <div className="text-xs text-zinc-500 mt-0.5">{event.description}</div>
+                    {(event.impact?.money || event.impact?.reputation) && (
+                      <div className="flex gap-3 mt-1">
+                        {event.impact.money && (
+                          <span className={`text-xs font-bold ${event.impact.money > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {event.impact.money > 0 ? '+' : ''}{formatMoney(event.impact.money)}
+                          </span>
+                        )}
+                        {event.impact.reputation && (
+                          <span className={`text-xs font-bold ${event.impact.reputation > 0 ? 'text-purple-400' : 'text-rose-400'}`}>
+                            {event.impact.reputation > 0 ? '+' : ''}{event.impact.reputation} rep
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs text-zinc-600 flex-shrink-0">W{event.week}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
