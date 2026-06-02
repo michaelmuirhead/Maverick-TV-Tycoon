@@ -12,6 +12,7 @@ import { GENRE_PROFILES } from '@/data/genres';
 interface Props {
   draft: ShowDraft;
   studioMoney: number;
+  buildingBonuses?: { production?: number; postProduction?: number };
 }
 
 function ScoreBar({ label, score, color }: { label: string; score: number; color: string }) {
@@ -31,16 +32,16 @@ function ScoreBar({ label, score, color }: { label: string; score: number; color
   );
 }
 
-export default function ReviewStep({ draft, studioMoney }: Props) {
-  const quality = calcShowQuality(draft);
+export default function ReviewStep({ draft, studioMoney, buildingBonuses }: Props) {
+  const quality = calcShowQuality(draft, buildingBonuses);
   const epCost = calcEpisodeCost(draft);
   const seasonCost = epCost * draft.episodeCount;
   const canAfford = studioMoney >= seasonCost;
   const genre = GENRE_PROFILES[draft.genre];
 
   const castQ = calcCastQuality(draft);
-  const prodQ = calcProductionQuality(draft);
-  const postQ = calcPostProductionQuality(draft);
+  const prodQ = calcProductionQuality(draft, buildingBonuses?.production ?? 0);
+  const postQ = calcPostProductionQuality(draft, buildingBonuses?.postProduction ?? 0);
   const creativeQ = calcCreativeGenreFit(draft);
 
   const { color } = getQualityLabel(quality);
@@ -64,8 +65,14 @@ export default function ReviewStep({ draft, studioMoney }: Props) {
 
             <div className="mt-4 space-y-2">
               <ScoreBar label="Cast & Direction" score={castQ} color="amber" />
-              <ScoreBar label="Production Value" score={prodQ} color="blue" />
-              <ScoreBar label="Post-Production" score={postQ} color="purple" />
+              <ScoreBar
+                label={`Production Value${(buildingBonuses?.production ?? 0) > 0 ? ` (+${buildingBonuses!.production} studio)` : ''}`}
+                score={prodQ} color="blue"
+              />
+              <ScoreBar
+                label={`Post-Production${(buildingBonuses?.postProduction ?? 0) > 0 ? ` (+${buildingBonuses!.postProduction} suite)` : ''}`}
+                score={postQ} color="purple"
+              />
               <ScoreBar label="Creative Genre Fit" score={creativeQ} color="emerald" />
             </div>
           </div>

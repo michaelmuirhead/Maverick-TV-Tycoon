@@ -9,6 +9,7 @@ import Productions from './Productions';
 import TalentMarket from './TalentMarket';
 import AwardsCeremony from './AwardsCeremony';
 import RivalStudios from './RivalStudios';
+import StudioHQ from './StudioHQ';
 
 export default function Game() {
   const screen = useGameStore((s) => s.screen);
@@ -22,6 +23,7 @@ export default function Game() {
     case 'talent-market': return <TalentMarket />;
     case 'awards':        return <AwardsCeremony />;
     case 'rivals':        return <RivalStudios />;
+    case 'studio-hq':     return <StudioHQ />;
     default:              return <Welcome />;
   }
 }

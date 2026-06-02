@@ -7,7 +7,16 @@ export type NetworkType = 'broadcast' | 'cable' | 'premium' | 'streaming' | 'int
 
 export type GameScreen =
   | 'welcome' | 'dashboard' | 'show-creator' | 'network-hub'
-  | 'productions' | 'talent-market' | 'awards' | 'rivals';
+  | 'productions' | 'talent-market' | 'awards' | 'rivals' | 'studio-hq';
+
+export type BuildingType = 'recording-studio' | 'editing-suite';
+export type BuildingTier = 'basic' | 'professional' | 'prestige';
+
+export interface StudioBuilding {
+  id: string;
+  type: BuildingType;
+  tier: BuildingTier;
+}
 
 export type GameEventType =
   | 'ratings-spike' | 'ratings-drop' | 'viral-moment' | 'scandal'
@@ -258,4 +267,5 @@ export interface Studio {
   awardsSeasonYear: number;
   networkSlots: Record<string, number>;
   genrePopularity: Record<string, number>;
+  buildings?: StudioBuilding[];
 }

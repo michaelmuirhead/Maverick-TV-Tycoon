@@ -11,7 +11,7 @@ interface Props {
 
 const SLIDERS = [
   { key: 'crew', label: 'Production Crew', sublabel: 'Camera operators, lighting, sound on set', min: 10000, max: 500000, step: 10000, color: 'amber' },
-  { key: 'recordingStudio', label: 'Recording Studio', sublabel: 'Studio space, equipment hire, facilities', min: 5000, max: 300000, step: 5000, color: 'blue' },
+  { key: 'recordingStudio', label: 'Equipment Rental', sublabel: 'Cameras, lighting rigs, on-set gear hire per episode', min: 5000, max: 300000, step: 5000, color: 'blue' },
   { key: 'locations', label: 'Locations', sublabel: 'On-location shoots, permits, travel', min: 0, max: 1000000, step: 25000, color: 'emerald' },
   { key: 'sets', label: 'Sets & Production Design', sublabel: 'Set construction, dressing, art department', min: 0, max: 2000000, step: 50000, color: 'purple' },
 ] as const;

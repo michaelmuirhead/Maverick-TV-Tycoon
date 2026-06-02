@@ -9,6 +9,7 @@ interface NetworkCardProps {
   networkFit: number;
   offer: number;
   onPitch: () => void;
+  pitchDisabled?: boolean;
 }
 
 const TYPE_BADGE: Record<string, string> = {
@@ -25,8 +26,8 @@ const TYPE_LABEL: Record<string, string> = {
   streaming: 'Streaming',
 };
 
-export default function NetworkCard({ network, quality, networkFit, offer, onPitch }: NetworkCardProps) {
-  const canPitch = quality >= network.minQuality;
+export default function NetworkCard({ network, quality, networkFit, offer, onPitch, pitchDisabled }: NetworkCardProps) {
+  const canPitch = quality >= network.minQuality && !pitchDisabled;
   const fitColor = networkFit >= 75 ? 'text-emerald-400' : networkFit >= 50 ? 'text-amber-400' : 'text-rose-400';
 
   return (
@@ -74,7 +75,7 @@ export default function NetworkCard({ network, quality, networkFit, offer, onPit
             : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
         }`}
       >
-        {canPitch ? 'Pitch This Show' : `Quality too low (need ${network.minQuality})`}
+        {pitchDisabled ? 'No Studio Capacity' : canPitch ? 'Pitch This Show' : `Quality too low (need ${network.minQuality})`}
       </button>
     </div>
   );

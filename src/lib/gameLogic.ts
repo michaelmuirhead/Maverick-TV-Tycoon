@@ -1,5 +1,6 @@
-import { ShowDraft, Network, Genre } from '@/types/game';
+import { ShowDraft, Network, Genre, StudioBuilding, BuildingTier } from '@/types/game';
 import { GENRE_PROFILES } from '@/data/genres';
+import { BUILDING_CONFIG, TIER_ORDER } from '@/data/buildings';
 
 function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
@@ -35,7 +36,7 @@ export function calcCastQuality(draft: ShowDraft): number {
   return clamp(starAvg * 14 + mainBonus * 0.2 + directorBonus * 0.4 + writerBonus * 0.3 + guestBonus + extras + stunt, 0, 100);
 }
 
-export function calcProductionQuality(draft: ShowDraft): number {
+export function calcProductionQuality(draft: ShowDraft, tierBonus = 0): number {
   const { crew, recordingStudio, locations, sets } = draft.production;
   const maxCrew = 500000;
   const maxStudio = 300000;
@@ -48,10 +49,10 @@ export function calcProductionQuality(draft: ShowDraft): number {
     (locations / maxLoc) * 25 +
     (sets / maxSets) * 25;
 
-  return clamp(score, 0, 100);
+  return clamp(score + tierBonus, 0, 100);
 }
 
-export function calcPostProductionQuality(draft: ShowDraft): number {
+export function calcPostProductionQuality(draft: ShowDraft, tierBonus = 0): number {
   const { editing, visualEffects, soundEffects, music } = draft.postProduction;
   const maxEdit = 200000;
   const maxVfx = 5000000;
@@ -68,7 +69,7 @@ export function calcPostProductionQuality(draft: ShowDraft): number {
     (soundEffects / maxSfx) * otherWeight * 100 +
     (music / maxMusic) * otherWeight * 100;
 
-  return clamp(score, 0, 100);
+  return clamp(score + tierBonus, 0, 100);
 }
 
 export function calcCreativeGenreFit(draft: ShowDraft): number {
@@ -93,14 +94,37 @@ export function calcCreativeGenreFit(draft: ShowDraft): number {
   return (ciFit * 0.35 + prFit * 0.25 + wlFit * 0.20 + stFit * 0.20);
 }
 
-export function calcShowQuality(draft: ShowDraft): number {
+export function calcShowQuality(
+  draft: ShowDraft,
+  buildingBonuses?: { production?: number; postProduction?: number }
+): number {
   const castQ = calcCastQuality(draft);
-  const prodQ = calcProductionQuality(draft);
-  const postQ = calcPostProductionQuality(draft);
+  const prodQ = calcProductionQuality(draft, buildingBonuses?.production ?? 0);
+  const postQ = calcPostProductionQuality(draft, buildingBonuses?.postProduction ?? 0);
   const creativeQ = calcCreativeGenreFit(draft);
 
   const quality = castQ * 0.30 + prodQ * 0.22 + postQ * 0.18 + creativeQ * 0.30;
   return Math.round(clamp(quality, 0, 100));
+}
+
+export function getBuildingQualityBonuses(buildings: StudioBuilding[]): { production: number; postProduction: number } {
+  const rsBuildings = buildings.filter(b => b.type === 'recording-studio');
+  const esBuildings = buildings.filter(b => b.type === 'editing-suite');
+
+  const bestTier = (blds: StudioBuilding[]): BuildingTier =>
+    blds.reduce((best, b) =>
+      TIER_ORDER.indexOf(b.tier) > TIER_ORDER.indexOf(best) ? b.tier : best,
+      'basic' as BuildingTier
+    );
+
+  return {
+    production: rsBuildings.length ? BUILDING_CONFIG['recording-studio'][bestTier(rsBuildings)].qualityBonus : 0,
+    postProduction: esBuildings.length ? BUILDING_CONFIG['editing-suite'][bestTier(esBuildings)].qualityBonus : 0,
+  };
+}
+
+export function getBuildingCapacity(buildings: StudioBuilding[], type: 'recording-studio' | 'editing-suite'): number {
+  return buildings.filter(b => b.type === type).reduce((sum, b) => sum + BUILDING_CONFIG[type][b.tier].capacity, 0);
 }
 
 export function calcEpisodeCost(draft: ShowDraft): number {

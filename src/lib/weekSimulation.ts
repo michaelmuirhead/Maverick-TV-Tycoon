@@ -5,6 +5,7 @@ import {
 import { NETWORKS } from '@/data/networks';
 import { RIVAL_STUDIOS } from '@/data/rivals';
 import { calcEpisodeCost } from '@/lib/gameLogic';
+import { BUILDING_CONFIG } from '@/data/buildings';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -410,6 +411,12 @@ export function advanceWeek(studio: Studio): WeekResult {
   const newEvents: GameEvent[] = [];
   let money = studio.money;
   let reputation = studio.reputation;
+
+  // Deduct building maintenance
+  const buildingMaintenance = (studio.buildings ?? []).reduce(
+    (sum, b) => sum + BUILDING_CONFIG[b.type][b.tier].weeklyMaintenance, 0
+  );
+  money -= buildingMaintenance;
   let awardsSeasonYear = studio.awardsSeasonYear;
 
   // ── process productions ─────────────────────────────────────────────────

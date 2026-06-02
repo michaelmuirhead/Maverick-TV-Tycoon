@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { useGameStore } from '@/store/gameStore';
-import { calcShowQuality, calcEpisodeCost } from '@/lib/gameLogic';
+import { calcShowQuality, calcEpisodeCost, getBuildingQualityBonuses } from '@/lib/gameLogic';
 import QualityMeter from '@/components/ui/QualityMeter';
 import BasicInfo from './steps/BasicInfo';
 import CastCrew from './steps/CastCrew';
@@ -30,7 +30,8 @@ export default function ShowCreator() {
   if (!studio?.currentDraft) return null;
   const draft = studio.currentDraft;
 
-  const quality = calcShowQuality(draft);
+  const buildingBonuses = getBuildingQualityBonuses(studio.buildings ?? []);
+  const quality = calcShowQuality(draft, buildingBonuses);
   const epCost = calcEpisodeCost(draft);
 
   const canProceed = () => {
@@ -99,7 +100,7 @@ export default function ShowCreator() {
         {step === 2 && <ProductionBudgetStep draft={draft} onUpdate={updateDraft} />}
         {step === 3 && <PostProductionStep draft={draft} onUpdate={updateDraft} />}
         {step === 4 && <CreativeSliders draft={draft} onUpdate={updateDraft} />}
-        {step === 5 && <ReviewStep draft={draft} studioMoney={studio.money} />}
+        {step === 5 && <ReviewStep draft={draft} studioMoney={studio.money} buildingBonuses={buildingBonuses} />}
       </div>
 
       {/* Footer Nav */}

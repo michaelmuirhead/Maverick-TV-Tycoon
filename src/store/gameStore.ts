@@ -2,16 +2,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   Studio, ShowDraft, NetworkDeal, GameScreen, Genre,
-  ActiveProduction,
+  ActiveProduction, StudioBuilding, BuildingType,
 } from '@/types/game';
 import {
   createDefaultDraft, calcShowQuality,
   calcNetworkFit, calcNetworkOffer,
+  getBuildingQualityBonuses, getBuildingCapacity,
 } from '@/lib/gameLogic';
 import { advanceWeek as simulateWeek, calcBaseRating } from '@/lib/weekSimulation';
 import { NETWORKS } from '@/data/networks';
 import { RIVAL_STUDIOS } from '@/data/rivals';
 import { GENRE_PROFILES } from '@/data/genres';
+import { BUILDING_CONFIG, DEFAULT_BUILDINGS, getNextTier } from '@/data/buildings';
 
 interface GameState {
   screen: GameScreen;
@@ -25,6 +27,8 @@ interface GameState {
   resetDraft: () => void;
   pitchShow: (networkId: string, releaseStrategy?: 'weekly' | 'all-at-once') => void;
   advanceWeek: () => void;
+  buildBuilding: (type: BuildingType) => void;
+  upgradeBuilding: (buildingId: string) => void;
   acceptRenewal: (offerId: string) => void;
   declineRenewal: (offerId: string) => void;
   markEventsRead: () => void;
@@ -68,6 +72,7 @@ export const useGameStore = create<GameState>()(
             awardsSeasonYear: 0,
             networkSlots: {},
             genrePopularity: initialPopularity,
+            buildings: [...DEFAULT_BUILDINGS],
           },
         });
       },
@@ -96,7 +101,16 @@ export const useGameStore = create<GameState>()(
         const network = NETWORKS.find((n) => n.id === networkId);
         if (!network) return;
 
-        const quality = calcShowQuality(draft);
+        // Capacity check — only enforced for new games with buildings data
+        if (studio.buildings !== undefined) {
+          const activeCount = studio.activeProductions.filter(p => p.status !== 'completed').length;
+          const rsCapacity = getBuildingCapacity(studio.buildings, 'recording-studio');
+          const esCapacity = getBuildingCapacity(studio.buildings, 'editing-suite');
+          if (rsCapacity <= activeCount || esCapacity <= activeCount) return;
+        }
+
+        const buildingBonuses = getBuildingQualityBonuses(studio.buildings ?? []);
+        const quality = calcShowQuality(draft, buildingBonuses);
         const networkFit = calcNetworkFit(draft, network);
         const totalOffer = calcNetworkOffer(quality, networkFit, network, draft.episodeCount);
         const payPerEpisode = Math.round(totalOffer / draft.episodeCount);
@@ -212,6 +226,46 @@ export const useGameStore = create<GameState>()(
             ? { ...s.studio, events: s.studio.events.map(e => ({ ...e, isRead: true })) }
             : null,
         })),
+
+      buildBuilding: (type) => {
+        const { studio } = get();
+        if (!studio) return;
+        const config = BUILDING_CONFIG[type]['basic'];
+        if (studio.money < config.buildCost) return;
+        const newBuilding: StudioBuilding = {
+          id: `building-${type}-${Date.now()}`,
+          type,
+          tier: 'basic',
+        };
+        set((s) => ({
+          studio: s.studio ? {
+            ...s.studio,
+            money: s.studio.money - config.buildCost,
+            buildings: [...(s.studio.buildings ?? DEFAULT_BUILDINGS), newBuilding],
+          } : null,
+        }));
+      },
+
+      upgradeBuilding: (buildingId) => {
+        const { studio } = get();
+        if (!studio) return;
+        const buildings = studio.buildings ?? DEFAULT_BUILDINGS;
+        const building = buildings.find(b => b.id === buildingId);
+        if (!building) return;
+        const nextTier = getNextTier(building.tier);
+        if (!nextTier) return;
+        const upgradeCost = BUILDING_CONFIG[building.type][building.tier].upgradeCost;
+        if (studio.money < upgradeCost) return;
+        set((s) => ({
+          studio: s.studio ? {
+            ...s.studio,
+            money: s.studio.money - upgradeCost,
+            buildings: (s.studio.buildings ?? DEFAULT_BUILDINGS).map(b =>
+              b.id === buildingId ? { ...b, tier: nextTier } : b
+            ),
+          } : null,
+        }));
+      },
 
       resetGame: () => set({ screen: 'welcome', studio: null, showCreatorStep: 0 }),
     }),

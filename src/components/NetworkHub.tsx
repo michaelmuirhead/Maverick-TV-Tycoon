@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
-import { calcShowQuality, calcNetworkFit, calcNetworkOffer, formatMoney } from '@/lib/gameLogic';
+import { calcShowQuality, calcNetworkFit, calcNetworkOffer, formatMoney, getBuildingQualityBonuses, getBuildingCapacity } from '@/lib/gameLogic';
 import NetworkCard from '@/components/ui/NetworkCard';
 import QualityMeter from '@/components/ui/QualityMeter';
 import { NETWORKS } from '@/data/networks';
@@ -42,8 +42,15 @@ export default function NetworkHub() {
   }
 
   const draft = studio.currentDraft;
-  const quality = calcShowQuality(draft);
+  const buildings = studio.buildings ?? [];
+  const buildingBonuses = getBuildingQualityBonuses(buildings);
+  const quality = calcShowQuality(draft, buildingBonuses);
   const genre = GENRE_PROFILES[draft.genre];
+
+  const activeCount = studio.activeProductions.filter(p => p.status !== 'completed').length;
+  const rsCapacity = getBuildingCapacity(buildings, 'recording-studio');
+  const esCapacity = getBuildingCapacity(buildings, 'editing-suite');
+  const hasCapacity = studio.buildings === undefined || (rsCapacity > activeCount && esCapacity > activeCount);
 
   const filtered = filter === 'all' ? NETWORKS : NETWORKS.filter((n) => n.type === filter);
 
@@ -107,6 +114,23 @@ export default function NetworkHub() {
           </div>
         </div>
 
+        {/* Capacity warning */}
+        {!hasCapacity && (
+          <div
+            onClick={() => setScreen('studio-hq')}
+            className="bg-rose-900/30 border border-rose-700 rounded-xl p-3 flex items-center justify-between cursor-pointer hover:border-rose-500 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🏗️</span>
+              <div>
+                <div className="font-bold text-rose-300 text-sm">No Production Capacity</div>
+                <div className="text-xs text-rose-600">All recording studios and editing suites are in use. Build more to pitch.</div>
+              </div>
+            </div>
+            <span className="text-rose-400 text-sm font-bold flex-shrink-0">Studio HQ →</span>
+          </div>
+        )}
+
         {/* Filter */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {Object.entries(TYPE_LABELS).map(([key, label]) => (
@@ -139,6 +163,7 @@ export default function NetworkHub() {
                   networkFit={fit}
                   offer={offer}
                   onPitch={() => handlePitch(network.id)}
+                  pitchDisabled={!hasCapacity}
                 />
                 {isPlayerChoice && (
                   <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
