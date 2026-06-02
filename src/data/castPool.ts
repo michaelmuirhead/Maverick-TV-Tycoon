@@ -163,17 +163,65 @@ export const CAST_POOL: CastMember[] = [
 ];
 
 export const CREW_POOL: CrewMember[] = [
-  // Directors
-  { id: 'd1', name: 'Helena Ford', role: 'director', level: 5, episodeFee: 300000, status: 'available' },
-  { id: 'd2', name: 'Antoine Dubois', role: 'director', level: 5, episodeFee: 280000, status: 'available' },
-  { id: 'd3', name: 'Kenji Nakamura', role: 'director', level: 4, episodeFee: 120000, status: 'available' },
-  { id: 'd4', name: 'Sofia Reyes', role: 'director', level: 4, episodeFee: 110000, status: 'available' },
-  { id: 'd5', name: 'Marcus Webb', role: 'director', level: 3, episodeFee: 50000, status: 'available' },
-  { id: 'd6', name: 'Anya Kowalski', role: 'director', level: 3, episodeFee: 45000, status: 'available' },
-  { id: 'd7', name: 'Sam Rivers', role: 'director', level: 2, episodeFee: 20000, status: 'available' },
-  { id: 'd8', name: 'Pat Donovan', role: 'director', level: 1, episodeFee: 8000, status: 'available' },
-  { id: 'd9', name: 'Yuki Tanaka', role: 'director', level: 4, episodeFee: 130000, status: 'available' },
-  { id: 'd10', name: 'Rosa Ibáñez', role: 'director', level: 3, episodeFee: 55000, status: 'available' },
+  // ===== ⭐⭐⭐⭐⭐ AUTEUR DIRECTORS (5) =====
+  { id: 'd1',  name: 'Helena Ford',        role: 'director', level: 5, episodeFee: 320000, status: 'available',         genreStrengths: ['drama', 'limited-series', 'anthology'],    genreWeaknesses: ['reality', 'comedy'] },
+  { id: 'd2',  name: 'Antoine Dubois',     role: 'director', level: 5, episodeFee: 295000, status: 'available',         genreStrengths: ['crime', 'drama', 'procedural'],            genreWeaknesses: ['sci-fi', 'fantasy'] },
+  { id: 'd11', name: 'Zara Westbrook',     role: 'director', level: 5, episodeFee: 340000, status: 'rival-contracted', genreStrengths: ['sci-fi', 'fantasy', 'action'],              genreWeaknesses: ['reality', 'soap-opera'] },
+  { id: 'd12', name: 'Dominic Osei',       role: 'director', level: 5, episodeFee: 275000, status: 'available',         genreStrengths: ['horror', 'crime', 'drama'],                 genreWeaknesses: ['talk-show', 'late-night'] },
+  { id: 'd13', name: 'Celeste Beaumont',   role: 'director', level: 5, episodeFee: 310000, status: 'available',         genreStrengths: ['comedy', 'drama', 'talk-show'],             genreWeaknesses: ['horror', 'action'] },
+
+  // ===== ⭐⭐⭐⭐ EXPERIENCED DIRECTORS (12) =====
+  { id: 'd3',  name: 'Kenji Nakamura',     role: 'director', level: 4, episodeFee: 135000, status: 'available',         genreStrengths: ['sci-fi', 'action', 'fantasy'],             genreWeaknesses: ['reality'] },
+  { id: 'd4',  name: 'Sofia Reyes',        role: 'director', level: 4, episodeFee: 115000, status: 'available',         genreStrengths: ['drama', 'soap-opera', 'anthology'],        genreWeaknesses: ['horror', 'sci-fi'] },
+  { id: 'd9',  name: 'Yuki Tanaka',        role: 'director', level: 4, episodeFee: 140000, status: 'available',         genreStrengths: ['documentary', 'limited-series', 'drama'],  genreWeaknesses: ['reality', 'comedy'] },
+  { id: 'd14', name: 'Viktor Payne',       role: 'director', level: 4, episodeFee: 125000, status: 'available',         genreStrengths: ['crime', 'procedural', 'drama'],            genreWeaknesses: ['comedy', 'reality'] },
+  { id: 'd15', name: 'Layla Okonkwo',      role: 'director', level: 4, episodeFee: 105000, status: 'available',         genreStrengths: ['reality', 'talk-show', 'late-night'],      genreWeaknesses: ['horror', 'sci-fi'] },
+  { id: 'd16', name: 'Jude Callahan',      role: 'director', level: 4, episodeFee: 130000, status: 'rival-contracted', genreStrengths: ['action', 'crime', 'drama'],                 genreWeaknesses: ['reality', 'talk-show'] },
+  { id: 'd17', name: 'Priya Mehta',        role: 'director', level: 4, episodeFee: 110000, status: 'available',         genreStrengths: ['drama', 'anthology', 'limited-series'],    genreWeaknesses: ['action', 'sci-fi'] },
+  { id: 'd18', name: 'Nikolai Voss',       role: 'director', level: 4, episodeFee: 145000, status: 'available',         genreStrengths: ['horror', 'sci-fi', 'fantasy'],             genreWeaknesses: ['comedy', 'talk-show'] },
+  { id: 'd19', name: 'Carmen Reyes',       role: 'director', level: 4, episodeFee: 100000, status: 'available',         genreStrengths: ['comedy', 'late-night', 'talk-show'],       genreWeaknesses: ['horror', 'crime'] },
+  { id: 'd20', name: 'Ezra Banks',         role: 'director', level: 4, episodeFee: 120000, status: 'available',         genreStrengths: ['drama', 'crime', 'procedural'],            genreWeaknesses: ['reality', 'comedy'] },
+  { id: 'd21', name: 'Ida Svensson',       role: 'director', level: 4, episodeFee: 115000, status: 'available',         genreStrengths: ['documentary', 'drama', 'anthology'],       genreWeaknesses: ['action', 'comedy'] },
+  { id: 'd22', name: 'Tyrone Cross',       role: 'director', level: 4, episodeFee: 128000, status: 'rival-contracted', genreStrengths: ['action', 'sci-fi', 'drama'],                genreWeaknesses: ['soap-opera', 'talk-show'] },
+
+  // ===== ⭐⭐⭐ WORKING DIRECTORS (16) =====
+  { id: 'd5',  name: 'Marcus Webb',        role: 'director', level: 3, episodeFee: 52000,  status: 'available',         genreStrengths: ['drama', 'crime'],                          genreWeaknesses: ['sci-fi', 'fantasy'] },
+  { id: 'd6',  name: 'Anya Kowalski',      role: 'director', level: 3, episodeFee: 47000,  status: 'available',         genreStrengths: ['comedy', 'drama'],                         genreWeaknesses: ['horror', 'action'] },
+  { id: 'd10', name: 'Rosa Ibáñez',        role: 'director', level: 3, episodeFee: 58000,  status: 'available',         genreStrengths: ['drama', 'soap-opera'],                     genreWeaknesses: ['sci-fi', 'action'] },
+  { id: 'd23', name: 'Ben Okafor',         role: 'director', level: 3, episodeFee: 55000,  status: 'available',         genreStrengths: ['procedural', 'crime', 'drama'],            genreWeaknesses: ['reality', 'fantasy'] },
+  { id: 'd24', name: 'Simone Laurent',     role: 'director', level: 3, episodeFee: 50000,  status: 'available',         genreStrengths: ['fantasy', 'drama', 'anthology'],           genreWeaknesses: ['reality', 'procedural'] },
+  { id: 'd25', name: 'Chase Hollis',       role: 'director', level: 3, episodeFee: 60000,  status: 'available',         genreStrengths: ['action', 'crime'],                         genreWeaknesses: ['comedy', 'talk-show'] },
+  { id: 'd26', name: 'Ingrid Bjork',       role: 'director', level: 3, episodeFee: 53000,  status: 'available',         genreStrengths: ['drama', 'limited-series'],                 genreWeaknesses: ['action', 'comedy'] },
+  { id: 'd27', name: 'Omar Khalid',        role: 'director', level: 3, episodeFee: 62000,  status: 'available',         genreStrengths: ['sci-fi', 'fantasy'],                       genreWeaknesses: ['reality', 'soap-opera'] },
+  { id: 'd28', name: 'Mia Castellano',     role: 'director', level: 3, episodeFee: 44000,  status: 'available',         genreStrengths: ['comedy', 'late-night', 'reality'],         genreWeaknesses: ['crime', 'horror'] },
+  { id: 'd29', name: 'Preston Gates',      role: 'director', level: 3, episodeFee: 57000,  status: 'rival-contracted', genreStrengths: ['crime', 'procedural'],                      genreWeaknesses: ['comedy', 'fantasy'] },
+  { id: 'd30', name: 'Thea Adeyemi',       role: 'director', level: 3, episodeFee: 49000,  status: 'available',         genreStrengths: ['drama', 'documentary', 'anthology'],       genreWeaknesses: ['action', 'horror'] },
+  { id: 'd31', name: 'Rafe Santiago',      role: 'director', level: 3, episodeFee: 65000,  status: 'available',         genreStrengths: ['horror', 'action', 'sci-fi'],              genreWeaknesses: ['comedy', 'talk-show'] },
+  { id: 'd32', name: 'Gwen Ashford',       role: 'director', level: 3, episodeFee: 42000,  status: 'available',         genreStrengths: ['soap-opera', 'drama', 'reality'],          genreWeaknesses: ['sci-fi', 'horror'] },
+  { id: 'd33', name: 'Bo Chen',            role: 'director', level: 3, episodeFee: 48000,  status: 'available',         genreStrengths: ['documentary', 'drama'],                    genreWeaknesses: ['action', 'comedy'] },
+  { id: 'd34', name: 'Dani Rivera',        role: 'director', level: 3, episodeFee: 43000,  status: 'available',         genreStrengths: ['comedy', 'reality', 'talk-show'],          genreWeaknesses: ['crime', 'drama'] },
+  { id: 'd35', name: 'Knox Whitmore',      role: 'director', level: 3, episodeFee: 61000,  status: 'available',         genreStrengths: ['action', 'drama', 'crime'],                genreWeaknesses: ['reality', 'comedy'] },
+
+  // ===== ⭐⭐ JOURNEYMAN DIRECTORS (11) =====
+  { id: 'd7',  name: 'Sam Rivers',         role: 'director', level: 2, episodeFee: 22000,  status: 'available',         genreStrengths: ['drama'],                                   genreWeaknesses: ['sci-fi', 'fantasy'] },
+  { id: 'd36', name: 'Patrice Monroe',     role: 'director', level: 2, episodeFee: 19000,  status: 'available',         genreStrengths: ['comedy'],                                  genreWeaknesses: ['crime', 'horror'] },
+  { id: 'd37', name: 'Hugo Lester',        role: 'director', level: 2, episodeFee: 24000,  status: 'available',         genreStrengths: ['crime', 'drama'],                          genreWeaknesses: ['sci-fi', 'fantasy'] },
+  { id: 'd38', name: 'Bea Nakamura',       role: 'director', level: 2, episodeFee: 20000,  status: 'available',         genreStrengths: ['drama', 'soap-opera'],                     genreWeaknesses: ['action', 'sci-fi'] },
+  { id: 'd39', name: 'Finn Hayes',         role: 'director', level: 2, episodeFee: 25000,  status: 'available',         genreStrengths: ['action', 'crime'],                         genreWeaknesses: ['comedy', 'reality'] },
+  { id: 'd40', name: 'Sasha Volkov',       role: 'director', level: 2, episodeFee: 23000,  status: 'available',         genreStrengths: ['sci-fi', 'fantasy'],                       genreWeaknesses: ['reality', 'soap-opera'] },
+  { id: 'd41', name: 'Lily Drummond',      role: 'director', level: 2, episodeFee: 18000,  status: 'available',         genreStrengths: ['comedy', 'talk-show'],                     genreWeaknesses: ['horror', 'action'] },
+  { id: 'd42', name: 'Greg Malone',        role: 'director', level: 2, episodeFee: 21000,  status: 'available',         genreStrengths: ['drama', 'procedural'],                     genreWeaknesses: ['comedy', 'reality'] },
+  { id: 'd43', name: 'Nora Kim',           role: 'director', level: 2, episodeFee: 26000,  status: 'available',         genreStrengths: ['horror', 'drama'],                         genreWeaknesses: ['comedy', 'talk-show'] },
+  { id: 'd44', name: 'Walt Fischer',       role: 'director', level: 2, episodeFee: 22000,  status: 'available',         genreStrengths: ['crime', 'action'],                         genreWeaknesses: ['comedy', 'reality'] },
+  { id: 'd45', name: 'Zoe Hartley',        role: 'director', level: 2, episodeFee: 19000,  status: 'available',         genreStrengths: ['drama', 'soap-opera'],                     genreWeaknesses: ['action', 'sci-fi'] },
+
+  // ===== ⭐ ROOKIE DIRECTORS (6) =====
+  { id: 'd8',  name: 'Pat Donovan',        role: 'director', level: 1, episodeFee: 8000,   status: 'available',         genreStrengths: ['drama'],                                   genreWeaknesses: ['comedy', 'sci-fi'] },
+  { id: 'd46', name: 'Mick Sloane',        role: 'director', level: 1, episodeFee: 9000,   status: 'available',         genreStrengths: ['crime'],                                   genreWeaknesses: ['fantasy', 'sci-fi'] },
+  { id: 'd47', name: 'Sandy Osei',         role: 'director', level: 1, episodeFee: 7500,   status: 'available',         genreStrengths: ['comedy'],                                  genreWeaknesses: ['crime', 'horror'] },
+  { id: 'd48', name: 'Tara Burke',         role: 'director', level: 1, episodeFee: 8500,   status: 'available',         genreStrengths: ['drama'],                                   genreWeaknesses: ['action', 'sci-fi'] },
+  { id: 'd49', name: 'Cal Winters',        role: 'director', level: 1, episodeFee: 10000,  status: 'available',         genreStrengths: ['action'],                                  genreWeaknesses: ['drama', 'comedy'] },
+  { id: 'd50', name: 'Kit Morales',        role: 'director', level: 1, episodeFee: 7000,   status: 'available',         genreStrengths: ['reality'],                                 genreWeaknesses: ['drama', 'sci-fi'] },
 
   // ===== ⭐⭐⭐⭐⭐ ELITE WRITERS (6) =====
   { id: 'w1',  name: 'Rachel Kim',           role: 'writer', level: 5, episodeFee: 200000, status: 'available', genreStrengths: ['drama', 'limited-series'], genreWeaknesses: ['reality'] },

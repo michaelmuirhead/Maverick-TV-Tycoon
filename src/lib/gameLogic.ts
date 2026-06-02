@@ -20,11 +20,14 @@ function avgFit(sliders: Record<string, number>, ideals: Record<string, [number,
   return total / keys.length;
 }
 
-export function calcWriterGenreMultiplier(writer: CrewMember, genre: Genre): number {
-  if (writer.genreStrengths?.includes(genre)) return 1.5;
-  if (writer.genreWeaknesses?.includes(genre)) return 0.5;
+export function calcCrewGenreMultiplier(member: CrewMember, genre: Genre): number {
+  if (member.genreStrengths?.includes(genre)) return 1.5;
+  if (member.genreWeaknesses?.includes(genre)) return 0.5;
   return 1.0;
 }
+
+/** @deprecated use calcCrewGenreMultiplier */
+export const calcWriterGenreMultiplier = calcCrewGenreMultiplier;
 
 export function calcCastQuality(draft: ShowDraft): number {
   const allCast = [...draft.mainCast, ...draft.supportingCast];
@@ -33,8 +36,9 @@ export function calcCastQuality(draft: ShowDraft): number {
   const mainBonus = draft.mainCast.length > 0
     ? (draft.mainCast.reduce((s, c) => s + c.starLevel, 0) / draft.mainCast.length) * 10
     : 0;
-  const directorBonus = draft.director ? draft.director.level * 8 : 0;
-  const writerMult = draft.writer ? calcWriterGenreMultiplier(draft.writer, draft.genre) : 1;
+  const directorMult = draft.director ? calcCrewGenreMultiplier(draft.director, draft.genre) : 1;
+  const directorBonus = draft.director ? draft.director.level * 8 * directorMult : 0;
+  const writerMult = draft.writer ? calcCrewGenreMultiplier(draft.writer, draft.genre) : 1;
   const writerBonus = draft.writer ? draft.writer.level * 6 * writerMult : 0;
   const guestBonus = Math.min(20, (draft.guestStarBudget / 100000) * 3);
   const extras = Math.min(5, (draft.extrasBudget / 50000) * 2);

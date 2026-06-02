@@ -218,12 +218,13 @@ export default function CastCrew({ draft, onUpdate }: Props) {
         <div className="space-y-5">
           <div>
             <h4 className="text-sm font-semibold text-zinc-300 mb-2">Director {draft.director ? `— ${draft.director.name}` : ''}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
               {directors.map((d) => (
                 <CrewCard
                   key={d.id} member={d}
                   hired={draft.director?.id === d.id}
                   onHire={() => onUpdate({ director: draft.director?.id === d.id ? null : d })}
+                  draftGenre={draft.genre}
                 />
               ))}
             </div>
