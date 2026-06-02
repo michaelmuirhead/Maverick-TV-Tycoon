@@ -38,7 +38,7 @@ export default function Dashboard() {
             <div className="min-w-0">
               <h1 className="font-black text-base md:text-lg text-white truncate">{studio.name}</h1>
               <p className="text-xs text-zinc-500 truncate">
-                Yr {studio.year} · W{studio.week}
+                {studio.playerName ? `${studio.playerName} · ` : ''}Yr {studio.year} · W{studio.week}
               </p>
             </div>
           </div>

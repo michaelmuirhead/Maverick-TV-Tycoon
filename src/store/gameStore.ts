@@ -23,7 +23,7 @@ interface GameState {
   studio: Studio | null;
   showCreatorStep: number;
 
-  startGame: (studioName: string, specialty: Genre) => void;
+  startGame: (studioName: string, specialty: Genre, playerName?: string) => void;
   setScreen: (screen: GameScreen) => void;
   setShowCreatorStep: (step: number) => void;
   updateDraft: (updates: Partial<ShowDraft>) => void;
@@ -54,7 +54,7 @@ export const useGameStore = create<GameState>()(
       studio: null,
       showCreatorStep: 0,
 
-      startGame: (studioName, specialty) => {
+      startGame: (studioName, specialty, playerName) => {
         const initialPopularity = Object.fromEntries(
           Object.keys(GENRE_PROFILES).map(g => [g, 50 + Math.round((Math.random() - 0.5) * 20)])
         );
@@ -63,6 +63,7 @@ export const useGameStore = create<GameState>()(
           showCreatorStep: 0,
           studio: {
             name: studioName,
+            playerName: playerName?.trim() || undefined,
             specialty,
             money: STARTING_MONEY,
             reputation: 20,

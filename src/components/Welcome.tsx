@@ -4,12 +4,14 @@ import { useGameStore } from '@/store/gameStore';
 
 export default function Welcome() {
   const startGame = useGameStore((s) => s.startGame);
-  const [name, setName] = useState('');
+  const [playerName, setPlayerName] = useState('');
+  const [studioName, setStudioName] = useState('');
   const [error, setError] = useState('');
 
   const handleStart = () => {
-    if (!name.trim()) { setError('Give your studio a name.'); return; }
-    startGame(name.trim(), 'drama');
+    if (!playerName.trim()) { setError('Enter your name to get started.'); return; }
+    if (!studioName.trim()) { setError('Give your studio a name.'); return; }
+    startGame(studioName.trim(), 'drama', playerName.trim());
   };
 
   return (
@@ -25,13 +27,27 @@ export default function Welcome() {
       </div>
 
       <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-5 sm:p-8 space-y-6 sm:space-y-8">
+        {/* Player Name */}
+        <div>
+          <label className="block text-sm font-semibold text-zinc-300 mb-2">Your Name</label>
+          <input
+            type="text"
+            value={playerName}
+            onChange={(e) => { setPlayerName(e.target.value); setError(''); }}
+            onKeyDown={(e) => e.key === 'Enter' && handleStart()}
+            placeholder="e.g. Alex Morgan"
+            maxLength={40}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-base focus:outline-none focus:border-amber-500 transition-colors"
+          />
+        </div>
+
         {/* Studio Name */}
         <div>
           <label className="block text-sm font-semibold text-zinc-300 mb-2">Studio Name</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => { setName(e.target.value); setError(''); }}
+            value={studioName}
+            onChange={(e) => { setStudioName(e.target.value); setError(''); }}
             onKeyDown={(e) => e.key === 'Enter' && handleStart()}
             placeholder="e.g. Maverick Pictures"
             maxLength={40}
