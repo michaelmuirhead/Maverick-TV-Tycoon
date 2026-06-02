@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { ShowDraft, CastMember, CrewMember } from '@/types/game';
 import { CAST_POOL, CREW_POOL } from '@/data/castPool';
+import { useGameStore } from '@/store/gameStore';
 import { formatMoney } from '@/lib/gameLogic';
 
 interface Props {
@@ -19,23 +20,35 @@ function StarRating({ level }: { level: number }) {
   );
 }
 
-function CastCard({ member, hired, onToggle }: { member: CastMember; hired: boolean; onToggle: () => void }) {
+function CastCard({
+  member, hired, onToggle, contracted, rivalContracted,
+}: {
+  member: CastMember; hired: boolean; onToggle: () => void;
+  contracted?: boolean; rivalContracted?: boolean;
+}) {
+  const isDisabled = contracted || rivalContracted;
   return (
     <div
-      onClick={onToggle}
-      className={`p-3 rounded-xl border cursor-pointer transition-all duration-150 ${
-        hired
-          ? 'bg-amber-500/15 border-amber-500/60 text-amber-200'
-          : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500'
+      onClick={isDisabled ? undefined : onToggle}
+      className={`p-3 rounded-xl border transition-all duration-150 ${
+        isDisabled
+          ? 'bg-zinc-900/40 border-zinc-800 opacity-50 cursor-not-allowed'
+          : hired
+          ? 'bg-amber-500/15 border-amber-500/60 text-amber-200 cursor-pointer'
+          : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500 cursor-pointer'
       }`}
     >
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="font-semibold text-sm">{member.name}</div>
+      <div className="flex justify-between items-start gap-2">
+        <div className="min-w-0">
+          <div className="font-semibold text-sm truncate">{member.name}</div>
           <StarRating level={member.starLevel} />
         </div>
-        <div className={`text-xs font-bold tabular-nums ${hired ? 'text-amber-400' : 'text-zinc-500'}`}>
-          {formatMoney(member.weeklyFee)}/ep
+        <div className="text-right flex-shrink-0">
+          <div className={`text-xs font-bold tabular-nums ${hired ? 'text-amber-400' : 'text-zinc-500'}`}>
+            {formatMoney(member.weeklyFee)}/ep
+          </div>
+          {contracted && <span className="text-xs text-rose-400 font-semibold block mt-0.5">On Show</span>}
+          {rivalContracted && <span className="text-xs text-purple-400 font-semibold block mt-0.5">Rival Studio</span>}
         </div>
       </div>
       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -76,6 +89,16 @@ function CrewCard({ member, hired, onHire }: { member: CrewMember; hired: boolea
 export default function CastCrew({ draft, onUpdate }: Props) {
   const [tab, setTab] = useState<Tab>('main');
 
+  const activeProductions = useGameStore((s) => s.studio?.activeProductions ?? []);
+
+  // IDs of actors locked into other active productions
+  const contractedIds = new Set(
+    activeProductions.flatMap((p) => [
+      ...p.draft.mainCast.map((c) => c.id),
+      ...p.draft.supportingCast.map((c) => c.id),
+    ])
+  );
+
   const mainCastIds = new Set(draft.mainCast.map((c) => c.id));
   const supportingIds = new Set(draft.supportingCast.map((c) => c.id));
 
@@ -99,8 +122,13 @@ export default function CastCrew({ draft, onUpdate }: Props) {
   const dirCost = draft.director?.episodeFee ?? 0;
   const writerCost = draft.writer?.episodeFee ?? 0;
 
-  const availableMain = CAST_POOL.filter((c) => !supportingIds.has(c.id));
-  const availableSupporting = CAST_POOL.filter((c) => !mainCastIds.has(c.id));
+  // Filter out fully unavailable; show rival-contracted and on-show as disabled
+  const availableMain = CAST_POOL.filter(
+    (c) => c.role === 'main' && c.status !== 'unavailable' && !supportingIds.has(c.id)
+  );
+  const availableSupporting = CAST_POOL.filter(
+    (c) => c.role === 'supporting' && c.status !== 'unavailable' && !mainCastIds.has(c.id)
+  );
   const directors = CREW_POOL.filter((c) => c.role === 'director');
   const writers = CREW_POOL.filter((c) => c.role === 'writer');
 
@@ -140,8 +168,15 @@ export default function CastCrew({ draft, onUpdate }: Props) {
         <div className="space-y-3">
           <p className="text-xs text-zinc-500">Select up to 5 lead actors. Higher star level = better quality boost.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
-            {availableMain.filter((c) => c.role === 'main').map((m) => (
-              <CastCard key={m.id} member={m} hired={mainCastIds.has(m.id)} onToggle={() => toggleMain(m)} />
+            {availableMain.map((m) => (
+              <CastCard
+                key={m.id}
+                member={m}
+                hired={mainCastIds.has(m.id)}
+                onToggle={() => toggleMain(m)}
+                contracted={contractedIds.has(m.id) && !mainCastIds.has(m.id)}
+                rivalContracted={m.status === 'rival-contracted'}
+              />
             ))}
           </div>
         </div>
@@ -152,8 +187,15 @@ export default function CastCrew({ draft, onUpdate }: Props) {
         <div className="space-y-3">
           <p className="text-xs text-zinc-500">Select up to 10 supporting actors.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
-            {availableSupporting.filter((c) => c.role === 'supporting').map((m) => (
-              <CastCard key={m.id} member={m} hired={supportingIds.has(m.id)} onToggle={() => toggleSupporting(m)} />
+            {availableSupporting.map((m) => (
+              <CastCard
+                key={m.id}
+                member={m}
+                hired={supportingIds.has(m.id)}
+                onToggle={() => toggleSupporting(m)}
+                contracted={contractedIds.has(m.id) && !supportingIds.has(m.id)}
+                rivalContracted={m.status === 'rival-contracted'}
+              />
             ))}
           </div>
         </div>
