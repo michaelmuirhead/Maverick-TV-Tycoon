@@ -84,12 +84,12 @@ export default function BasicInfo({ draft, onUpdate }: Props) {
       {/* Genre */}
       <div>
         <label className="block text-sm font-semibold text-zinc-300 mb-3">Genre</label>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
           {GENRES.map((g) => (
             <button
               key={g.id}
               onClick={() => handleGenreChange(g.id)}
-              className={`relative flex flex-col items-center gap-1 p-3 rounded-xl border text-xs font-medium transition-all duration-150 ${
+              className={`relative flex flex-col items-center gap-0.5 p-2 sm:p-3 rounded-xl border text-xs font-medium transition-all duration-150 ${
                 draft.genre === g.id
                   ? 'bg-amber-500/20 border-amber-500 text-amber-300'
                   : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
@@ -135,8 +135,8 @@ export default function BasicInfo({ draft, onUpdate }: Props) {
           <label className="text-sm font-semibold text-zinc-300">Season Episodes</label>
           <span className="text-amber-400 font-bold tabular-nums">{draft.episodeCount} episodes</span>
         </div>
-        <div className="relative">
-          <div className="h-2 rounded-full bg-zinc-700 overflow-hidden">
+        <div className="relative h-8 flex items-center">
+          <div className="absolute inset-x-0 h-2 rounded-full bg-zinc-700 overflow-hidden">
             <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.max(1, progressPct)}%` }} />
           </div>
           <input
@@ -146,7 +146,7 @@ export default function BasicInfo({ draft, onUpdate }: Props) {
             step={step}
             value={draft.episodeCount}
             onChange={(e) => onUpdate({ episodeCount: Number(e.target.value) })}
-            className="absolute inset-0 w-full opacity-0 cursor-pointer h-2"
+            className="absolute inset-0 w-full opacity-0 cursor-pointer"
           />
         </div>
         <div className="flex justify-between text-xs text-zinc-600 mt-1">

@@ -48,12 +48,18 @@ export default function ReviewStep({ draft, studioMoney }: Props) {
   return (
     <div className="space-y-6">
       {/* Quality Overview */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-        <div className="flex items-start gap-6">
-          <QualityMeter score={quality} size="lg" />
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-white">{draft.title || 'Untitled Show'}</h3>
-            <p className="text-sm text-zinc-500 mt-0.5">{genre.emoji} {genre.label} &bull; {draft.episodeCount} × {draft.episodeLength}min</p>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+          <div className="flex items-center gap-4 sm:block">
+            <QualityMeter score={quality} size="lg" />
+            <div className="sm:hidden">
+              <h3 className="text-lg font-bold text-white">{draft.title || 'Untitled Show'}</h3>
+              <p className="text-xs text-zinc-500">{genre.emoji} {genre.label} · {draft.episodeCount} × {draft.episodeLength}min</p>
+            </div>
+          </div>
+          <div className="flex-1 w-full">
+            <h3 className="text-xl font-bold text-white hidden sm:block">{draft.title || 'Untitled Show'}</h3>
+            <p className="text-sm text-zinc-500 mt-0.5 hidden sm:block">{genre.emoji} {genre.label} &bull; {draft.episodeCount} × {draft.episodeLength}min</p>
             {draft.logline && <p className="text-sm text-zinc-400 mt-2 italic">"{draft.logline}"</p>}
 
             <div className="mt-4 space-y-2">

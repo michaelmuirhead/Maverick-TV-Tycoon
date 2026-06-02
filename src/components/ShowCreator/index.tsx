@@ -52,7 +52,7 @@ export default function ShowCreator() {
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div>
             <h1 className="font-bold text-base text-white">Show Creator</h1>
             <p className="text-xs text-zinc-500">
@@ -69,7 +69,7 @@ export default function ShowCreator() {
         </div>
 
         {/* Step Progress */}
-        <div className="max-w-4xl mx-auto px-6 pb-3">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-3">
           <div className="flex gap-1">
             {STEPS.map((s) => (
               <div
@@ -93,7 +93,7 @@ export default function ShowCreator() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 max-w-4xl w-full mx-auto px-6 py-8">
+      <div className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {step === 0 && <BasicInfo draft={draft} onUpdate={updateDraft} />}
         {step === 1 && <CastCrew draft={draft} onUpdate={updateDraft} />}
         {step === 2 && <ProductionBudgetStep draft={draft} onUpdate={updateDraft} />}
@@ -104,22 +104,22 @@ export default function ShowCreator() {
 
       {/* Footer Nav */}
       <footer className="border-t border-zinc-800 bg-zinc-900/80 backdrop-blur sticky bottom-0">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
           <button
             onClick={handleBack}
-            className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold rounded-xl transition-all text-sm"
+            className="px-4 sm:px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold rounded-xl transition-all text-sm"
           >
-            ← Back
+            ← <span className="hidden sm:inline">Back</span>
           </button>
 
-          <div className="flex items-center gap-3">
-            <div className={`text-sm font-semibold ${quality >= 60 ? 'text-emerald-400' : quality >= 40 ? 'text-amber-400' : 'text-zinc-500'}`}>
-              Quality: {quality}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className={`text-xs sm:text-sm font-semibold ${quality >= 60 ? 'text-emerald-400' : quality >= 40 ? 'text-amber-400' : 'text-zinc-500'}`}>
+              Q: {quality}
             </div>
             <button
               onClick={handleNext}
               disabled={!canProceed()}
-              className={`px-6 py-2.5 font-bold rounded-xl text-sm transition-all ${
+              className={`px-4 sm:px-6 py-2.5 font-bold rounded-xl text-sm transition-all ${
                 canProceed()
                   ? step === STEPS.length - 1
                     ? 'bg-emerald-500 hover:bg-emerald-400 text-black'
@@ -127,7 +127,9 @@ export default function ShowCreator() {
                   : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
               }`}
             >
-              {step === STEPS.length - 1 ? 'Pitch to Networks →' : 'Next →'}
+              {step === STEPS.length - 1
+                ? <><span className="hidden sm:inline">Pitch to Networks</span><span className="sm:hidden">Pitch</span> →</>
+                : 'Next →'}
             </button>
           </div>
         </div>

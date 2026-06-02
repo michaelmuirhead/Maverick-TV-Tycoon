@@ -94,14 +94,14 @@ export default function RivalStudios() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center">
           <button onClick={() => setScreen('dashboard')} className="text-zinc-500 hover:text-zinc-300 text-sm mr-3">← Dashboard</button>
           <span className="text-zinc-700 mr-3">|</span>
           <h1 className="font-bold text-base text-white">🏢 Rival Studios</h1>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-5 md:space-y-6">
         {/* Your position */}
         <div className="bg-zinc-900 border border-amber-800/40 rounded-2xl p-5">
           <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Your Studio</h2>

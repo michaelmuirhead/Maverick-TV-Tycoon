@@ -16,16 +16,18 @@ export default function Welcome() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-4 py-8 sm:p-6">
       {/* Logo */}
-      <div className="mb-10 text-center">
-        <div className="text-6xl mb-3">🎬</div>
-        <h1 className="text-5xl font-black text-white tracking-tight">Maverick TV</h1>
-        <p className="text-amber-500 font-bold text-xl tracking-widest uppercase mt-1">Tycoon</p>
-        <p className="text-zinc-500 mt-3 text-base max-w-md">Build your production studio. Greenlight hit shows. Rule the airwaves.</p>
+      <div className="mb-8 text-center">
+        <div className="text-5xl mb-3">🎬</div>
+        <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight">Maverick TV</h1>
+        <p className="text-amber-500 font-bold text-lg sm:text-xl tracking-widest uppercase mt-1">Tycoon</p>
+        <p className="text-zinc-500 mt-3 text-sm sm:text-base max-w-sm mx-auto">
+          Build your production studio. Greenlight hit shows. Rule the airwaves.
+        </p>
       </div>
 
-      <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-8">
+      <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-5 sm:p-8 space-y-6 sm:space-y-8">
         {/* Studio Name */}
         <div>
           <label className="block text-sm font-semibold text-zinc-300 mb-2">Studio Name</label>
@@ -44,19 +46,19 @@ export default function Welcome() {
         {/* Specialty */}
         <div>
           <label className="block text-sm font-semibold text-zinc-300 mb-3">Studio Specialty</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {GENRES.map((g) => (
               <button
                 key={g.id}
                 onClick={() => setSpecialty(g.id)}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150 text-left ${
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150 text-left ${
                   specialty === g.id
                     ? 'bg-amber-500/20 border-amber-500 text-amber-300'
                     : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
                 }`}
               >
-                <span className="text-lg">{g.emoji}</span>
-                <span>{g.label}</span>
+                <span className="text-lg flex-shrink-0">{g.emoji}</span>
+                <span className="truncate">{g.label}</span>
               </button>
             ))}
           </div>

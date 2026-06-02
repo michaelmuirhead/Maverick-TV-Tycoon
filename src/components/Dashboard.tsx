@@ -32,37 +32,39 @@ export default function Dashboard() {
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🎬</span>
-            <div>
-              <h1 className="font-black text-lg text-white">{studio.name}</h1>
-              <p className="text-xs text-zinc-500">
-                {genre.emoji} {genre.label} · Year {studio.year}, Week {studio.week}
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xl md:text-2xl flex-shrink-0">🎬</span>
+            <div className="min-w-0">
+              <h1 className="font-black text-base md:text-lg text-white truncate">{studio.name}</h1>
+              <p className="text-xs text-zinc-500 truncate">
+                {genre.emoji} {genre.label} · Yr {studio.year} W{studio.week}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <div className="text-right hidden md:block">
               <div className={`text-xl font-bold tabular-nums ${profitColor}`}>{formatMoney(studio.money)}</div>
               <div className="text-xs text-zinc-500">Available Funds</div>
             </div>
             <button
               onClick={() => { advanceWeek(); }}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+              className="px-3 md:px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
             >
-              <span>⏭</span> Advance Week
+              <span>⏭</span>
+              <span className="hidden sm:inline">Advance </span>
+              <span>Week</span>
             </button>
-            <button onClick={resetGame} className="text-xs text-zinc-600 hover:text-zinc-400 px-2 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors">
+            <button onClick={resetGame} className="text-xs text-zinc-600 hover:text-zinc-400 px-2 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors hidden sm:block">
               New Game
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 md:gap-3">
           {[
             { label: '💰 Treasury', val: formatMoney(studio.money), color: profitColor },
             { label: '⭐ Reputation', val: `${studio.reputation}/100`, color: 'text-purple-400' },
