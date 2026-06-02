@@ -41,11 +41,18 @@ interface GameState {
   acceptRenewal: (offerId: string, options?: { includeFlashback?: boolean; includeTwoPartFinale?: boolean }) => void;
   declineRenewal: (offerId: string) => void;
   markEventsRead: () => void;
+  signToDevelopment: (castId: string) => void;
+  releaseDevelopmentActor: (castId: string) => void;
+  spendMoney: (amount: number) => void;
   resetGame: () => void;
 }
 
 const STARTING_MONEY = 10_000_000;
-const PRODUCTION_WEEKS = 2;
+
+function calcProductionWeeks(episodeCount: number, episodeLength: 22 | 44 | 60): number {
+  const weeksPerEpisode = episodeLength === 22 ? 4 : episodeLength === 44 ? 5 : 6;
+  return episodeCount * weeksPerEpisode;
+}
 
 export const useGameStore = create<GameState>()(
   persist(
@@ -82,6 +89,8 @@ export const useGameStore = create<GameState>()(
             awardsSeasonYear: 0,
             processedAwardCeremonies: {},
             networkReachModifiers: {},
+            developmentRoster: [],
+            passiveIncomeStreams: [],
             networkSlots: {},
             genrePopularity: initialPopularity,
             buildings: [...DEFAULT_BUILDINGS],
@@ -152,7 +161,7 @@ export const useGameStore = create<GameState>()(
           currentEpisode: 0,
           totalEpisodes: draft.episodeCount,
           episodeResults: [],
-          productionWeeks: PRODUCTION_WEEKS,
+          productionWeeks: calcProductionWeeks(draft.episodeCount, draft.episodeLength),
           status: 'in-production',
           ratingsModifier: 0,
           baseRating,
@@ -474,6 +483,46 @@ export const useGameStore = create<GameState>()(
             ? { ...s.studio, events: s.studio.events.map(e => ({ ...e, isRead: true })) }
             : null,
         })),
+
+      spendMoney: (amount) => {
+        set(s => s.studio ? { studio: { ...s.studio, money: s.studio.money - amount } } : {});
+      },
+
+      signToDevelopment: (castId) => {
+        const { studio } = get();
+        if (!studio) return;
+        const liveCast = studio.talentPool?.cast ?? CAST_POOL;
+        const actor = liveCast.find(c => c.id === castId);
+        if (!actor || actor.status !== 'available') return;
+        const devActor: CastMember = { ...actor, status: 'contracted', developmentWeeks: 0 };
+        const updatedPool = liveCast.map(c =>
+          c.id === castId ? { ...c, status: 'contracted' as const } : c
+        );
+        set(s => ({
+          studio: s.studio ? {
+            ...s.studio,
+            developmentRoster: [...(s.studio.developmentRoster ?? []), devActor],
+            talentPool: { cast: updatedPool, crew: studio.talentPool?.crew ?? CREW_POOL },
+          } : null,
+        }));
+      },
+
+      releaseDevelopmentActor: (castId) => {
+        const { studio } = get();
+        if (!studio) return;
+        const updatedRoster = (studio.developmentRoster ?? []).filter(a => a.id !== castId);
+        const liveCast = studio.talentPool?.cast ?? CAST_POOL;
+        const updatedPool = liveCast.map(c =>
+          c.id === castId ? { ...c, status: 'available' as const } : c
+        );
+        set(s => ({
+          studio: s.studio ? {
+            ...s.studio,
+            developmentRoster: updatedRoster,
+            talentPool: { cast: updatedPool, crew: studio.talentPool?.crew ?? CREW_POOL },
+          } : null,
+        }));
+      },
 
       buildBuilding: (type) => {
         const { studio } = get();

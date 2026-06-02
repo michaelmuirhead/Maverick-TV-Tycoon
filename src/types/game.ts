@@ -46,12 +46,13 @@ export interface CastMember {
   status: 'available' | 'contracted' | 'rival-contracted' | 'unavailable';
   age?: number;
   careerPhase?: 'rising' | 'peak' | 'declining';
+  developmentWeeks?: number;
 }
 
 export interface CrewMember {
   id: string;
   name: string;
-  role: 'director' | 'writer' | 'stunt';
+  role: 'director' | 'writer' | 'stunt' | 'showrunner';
   level: 1 | 2 | 3 | 4 | 5;
   episodeFee: number;
   status: 'available' | 'contracted' | 'rival-contracted';
@@ -126,6 +127,7 @@ export interface ShowDraft {
   supportingCast: CastMember[];
   director: CrewMember | null;
   writer: CrewMember | null;
+  showrunner?: CrewMember | null;
   guestStarBudget: number;
   extrasBudget: number;
   stuntBudget: number;
@@ -135,6 +137,17 @@ export interface ShowDraft {
   performanceRhythm: PerformanceRhythm;
   worldLook: WorldLook;
   storytelling: Storytelling;
+}
+
+export interface PassiveIncomeStream {
+  id: string;
+  type: 'merchandise' | 'streaming-residual';
+  showId: string;
+  showTitle: string;
+  weeklyIncome: number;
+  expiresWeek: number;
+  expiresYear: number;
+  networkName?: string;
 }
 
 export interface NetworkDeal {
@@ -303,6 +316,8 @@ export interface Studio {
   awardsSeasonYear: number;
   processedAwardCeremonies?: Record<string, number>;
   networkReachModifiers?: Record<string, number>;
+  developmentRoster?: CastMember[];
+  passiveIncomeStreams?: PassiveIncomeStream[];
   networkSlots: Record<string, number>;
   genrePopularity: Record<string, number>;
   buildings?: StudioBuilding[];
