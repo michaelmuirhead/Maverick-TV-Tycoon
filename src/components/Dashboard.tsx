@@ -90,6 +90,37 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Genre Market */}
+        {(() => {
+          const pop = studio.genrePopularity ?? {};
+          const hot = Object.entries(pop).filter(([, v]) => v >= 72).sort((a, b) => b[1] - a[1]).slice(0, 3);
+          const cold = Object.entries(pop).filter(([, v]) => v <= 30).sort((a, b) => a[1] - b[1]).slice(0, 3);
+          if (!hot.length && !cold.length) return null;
+          return (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Genre Market</div>
+              <div className="flex flex-wrap gap-2">
+                {hot.map(([g, v]) => {
+                  const gp = GENRE_PROFILES[g as keyof typeof GENRE_PROFILES];
+                  return (
+                    <span key={g} className="flex items-center gap-1 text-xs bg-amber-900/30 border border-amber-800/60 text-amber-300 px-2.5 py-1 rounded-full">
+                      🔥 {gp?.emoji} {gp?.label ?? g} <span className="text-amber-600 tabular-nums">{v}</span>
+                    </span>
+                  );
+                })}
+                {cold.map(([g, v]) => {
+                  const gp = GENRE_PROFILES[g as keyof typeof GENRE_PROFILES];
+                  return (
+                    <span key={g} className="flex items-center gap-1 text-xs bg-zinc-800/80 border border-zinc-700 text-zinc-500 px-2.5 py-1 rounded-full">
+                      📉 {gp?.emoji} {gp?.label ?? g} <span className="text-zinc-600 tabular-nums">{v}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Renewal Offers Banner */}
         {renewalCount > 0 && (
           <div

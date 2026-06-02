@@ -11,6 +11,7 @@ import {
 import { advanceWeek as simulateWeek, calcBaseRating } from '@/lib/weekSimulation';
 import { NETWORKS } from '@/data/networks';
 import { RIVAL_STUDIOS } from '@/data/rivals';
+import { GENRE_PROFILES } from '@/data/genres';
 
 interface GameState {
   screen: GameScreen;
@@ -41,6 +42,9 @@ export const useGameStore = create<GameState>()(
       showCreatorStep: 0,
 
       startGame: (studioName, specialty) => {
+        const initialPopularity = Object.fromEntries(
+          Object.keys(GENRE_PROFILES).map(g => [g, 50 + Math.round((Math.random() - 0.5) * 20)])
+        );
         set({
           screen: 'dashboard',
           showCreatorStep: 0,
@@ -50,7 +54,7 @@ export const useGameStore = create<GameState>()(
             money: STARTING_MONEY,
             reputation: 20,
             week: 1,
-            year: 2024,
+            year: 1,
             totalShows: 0,
             awardsWon: 0,
             activeDeals: [],
@@ -63,6 +67,7 @@ export const useGameStore = create<GameState>()(
             rivalStudios: RIVAL_STUDIOS,
             awardsSeasonYear: 0,
             networkSlots: {},
+            genrePopularity: initialPopularity,
           },
         });
       },

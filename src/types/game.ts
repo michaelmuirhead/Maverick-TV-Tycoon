@@ -257,4 +257,5 @@ export interface Studio {
   rivalStudios: RivalStudio[];
   awardsSeasonYear: number;
   networkSlots: Record<string, number>;
+  genrePopularity: Record<string, number>;
 }
