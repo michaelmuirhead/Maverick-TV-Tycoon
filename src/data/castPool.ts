@@ -1,4 +1,4 @@
-import { CastMember, CrewMember } from '@/types/game';
+import { CastMember, CrewMember, Genre } from '@/types/game';
 
 export const CAST_POOL: CastMember[] = [
   // ===== ⭐⭐⭐⭐⭐ A-LIST (15 total) =====
@@ -514,4 +514,16 @@ export const CREW_POOL: CrewMember[] = [
   { id: 'w98',  name: 'Iris Bloom',         role: 'writer', level: 1, episodeFee: 7000,   status: 'available', genreStrengths: ['drama'],       genreWeaknesses: ['horror'] },
   { id: 'w99',  name: 'Penn Hollis',        role: 'writer', level: 1, episodeFee: 8000,   status: 'available', genreStrengths: ['comedy'],      genreWeaknesses: ['crime'] },
   { id: 'w100', name: 'Zara Obi',           role: 'writer', level: 1, episodeFee: 6500,   status: 'available', genreStrengths: ['anthology'],   genreWeaknesses: ['reality'] },
+
+  // ===== SHOWRUNNERS =====
+  { id: 'sr1', name: 'Sarah Vance', role: 'showrunner' as const, level: 5, episodeFee: 90000, status: 'available' as const, genreStrengths: ['drama', 'limited-series'] as Genre[], careerPhase: 'peak' as const, age: 52 },
+  { id: 'sr2', name: 'Michael Donovan', role: 'showrunner' as const, level: 5, episodeFee: 100000, status: 'available' as const, genreStrengths: ['crime', 'procedural'] as Genre[], careerPhase: 'peak' as const, age: 58 },
+  { id: 'sr3', name: 'Elena Chase', role: 'showrunner' as const, level: 4, episodeFee: 60000, status: 'available' as const, genreStrengths: ['comedy', 'drama'] as Genre[], careerPhase: 'peak' as const, age: 44 },
+  { id: 'sr4', name: 'James Park', role: 'showrunner' as const, level: 4, episodeFee: 65000, status: 'available' as const, genreStrengths: ['sci-fi', 'fantasy', 'action'] as Genre[], careerPhase: 'peak' as const, age: 47 },
+  { id: 'sr5', name: 'Olivia Reyes', role: 'showrunner' as const, level: 4, episodeFee: 55000, status: 'available' as const, genreStrengths: ['drama', 'soap-opera'] as Genre[], careerPhase: 'rising' as const, age: 38 },
+  { id: 'sr6', name: 'David Kim', role: 'showrunner' as const, level: 3, episodeFee: 38000, status: 'available' as const, genreStrengths: ['reality', 'talk-show'] as Genre[], careerPhase: 'rising' as const, age: 34 },
+  { id: 'sr7', name: 'Hannah Ross', role: 'showrunner' as const, level: 3, episodeFee: 42000, status: 'available' as const, genreStrengths: ['horror', 'drama'] as Genre[], careerPhase: 'rising' as const, age: 36 },
+  { id: 'sr8', name: 'Tom Winters', role: 'showrunner' as const, level: 5, episodeFee: 110000, status: 'available' as const, genreStrengths: ['drama', 'anthology'] as Genre[], careerPhase: 'peak' as const, age: 62 },
+  { id: 'sr9', name: 'Priya Nair', role: 'showrunner' as const, level: 3, episodeFee: 35000, status: 'available' as const, genreStrengths: ['documentary', 'limited-series'] as Genre[], careerPhase: 'rising' as const, age: 32 },
+  { id: 'sr10', name: 'Carlos Mendez', role: 'showrunner' as const, level: 4, episodeFee: 70000, status: 'rival-contracted' as const, genreStrengths: ['crime', 'drama'] as Genre[], careerPhase: 'peak' as const, age: 50 },
 ];

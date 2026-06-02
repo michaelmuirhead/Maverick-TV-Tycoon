@@ -1,13 +1,15 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { ShowDraft, AiredShow } from '@/types/game';
 import {
   calcShowQuality, calcEpisodeCost, calcCastQuality,
   calcProductionQuality, calcPostProductionQuality, calcCreativeGenreFit,
+  calcCastChemistry, calcShowrunnerBonus,
   formatMoney, getQualityLabel, calcParentBoost, calcRevivalBoost,
 } from '@/lib/gameLogic';
 import QualityMeter from '@/components/ui/QualityMeter';
 import { GENRE_PROFILES } from '@/data/genres';
+import { useGameStore } from '@/store/gameStore';
 
 interface Props {
   draft: ShowDraft;
@@ -34,6 +36,9 @@ function ScoreBar({ label, score, color }: { label: string; score: number; color
 }
 
 export default function ReviewStep({ draft, studioMoney, buildingBonuses, airedShows }: Props) {
+  const spendMoney = useGameStore(s => s.spendMoney);
+  const [focusGroupResult, setFocusGroupResult] = useState<{ estimate: number; low: number; high: number } | null>(null);
+
   const quality = calcShowQuality(draft, buildingBonuses);
   const epCost = calcEpisodeCost(draft);
   const seasonCost = epCost * draft.episodeCount;
@@ -44,12 +49,22 @@ export default function ReviewStep({ draft, studioMoney, buildingBonuses, airedS
   const prodQ = calcProductionQuality(draft, buildingBonuses?.production ?? 0);
   const postQ = calcPostProductionQuality(draft, buildingBonuses?.postProduction ?? 0);
   const creativeQ = calcCreativeGenreFit(draft);
+  const chemistry = calcCastChemistry(draft.mainCast);
+  const { floor: srFloor, bonus: srBonus } = calcShowrunnerBonus(draft.showrunner, draft.genre);
 
   const { color } = getQualityLabel(quality);
   const parentBoost = airedShows ? calcParentBoost(draft, airedShows) : 0;
   const parentShow = parentBoost > 0 && draft.parentShowId ? airedShows?.find(s => s.id === draft.parentShowId) : null;
   const revivalBoost = airedShows ? calcRevivalBoost(draft, airedShows) : 0;
   const revivalParent = revivalBoost > 0 && draft.revivedFromShowId ? airedShows?.find(s => s.id === draft.revivedFromShowId) : null;
+
+  const focusGroupCost = Math.max(50_000, Math.round(epCost * 0.5));
+  const runFocusGroup = () => {
+    spendMoney(focusGroupCost);
+    const noise = (Math.random() - 0.5) * 10;
+    const est = Math.round(Math.max(1, Math.min(100, quality + noise)));
+    setFocusGroupResult({ estimate: est, low: Math.max(1, est - 5), high: Math.min(100, est + 5) });
+  };
 
   return (
     <div className="space-y-6">
@@ -80,8 +95,53 @@ export default function ReviewStep({ draft, studioMoney, buildingBonuses, airedS
               />
               <ScoreBar label="Creative Genre Fit" score={creativeQ} color="emerald" />
             </div>
+
+            {/* Chemistry chip */}
+            {draft.mainCast.length >= 2 && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-xs text-zinc-500">🧪 Cast Chemistry</span>
+                <span className={`text-xs font-bold ${chemistry >= 4 ? 'text-emerald-400' : chemistry >= 0 ? 'text-amber-400' : 'text-rose-400'}`}>
+                  {chemistry > 0 ? '+' : ''}{chemistry.toFixed(1)} pts
+                </span>
+              </div>
+            )}
+
+            {/* Showrunner bonus */}
+            {draft.showrunner && (srFloor > 0 || srBonus > 0) && (
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-zinc-500">🎬 Showrunner ({draft.showrunner.name})</span>
+                {srFloor > 0 && <span className="text-xs bg-blue-950/50 text-blue-400 border border-blue-800/50 px-1.5 py-0.5 rounded">Floor ≥{srFloor}</span>}
+                {srBonus > 0 && <span className="text-xs bg-emerald-950/50 text-emerald-400 border border-emerald-800/50 px-1.5 py-0.5 rounded">+{srBonus} bonus</span>}
+              </div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Focus Group */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-sm font-semibold text-zinc-200">🎯 Focus Group Test</div>
+            <div className="text-xs text-zinc-500 mt-0.5">Get an early quality estimate before pitching. Cost: {formatMoney(focusGroupCost)}</div>
+          </div>
+          <button
+            onClick={runFocusGroup}
+            disabled={studioMoney < focusGroupCost}
+            className="px-3 py-1.5 bg-indigo-900/40 hover:bg-indigo-800/60 border border-indigo-700/60 text-indigo-300 font-semibold text-xs rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+          >
+            Run Test
+          </button>
+        </div>
+        {focusGroupResult && (
+          <div className="mt-2 bg-indigo-950/50 border border-indigo-800/50 rounded-xl p-3 flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div>
+              <div className="text-sm font-bold text-indigo-300">Focus Groups Say: {focusGroupResult.estimate}/100</div>
+              <div className="text-xs text-zinc-400">Likely quality range: {focusGroupResult.low}–{focusGroupResult.high}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Parent Boost */}
@@ -166,7 +226,7 @@ export default function ReviewStep({ draft, studioMoney, buildingBonuses, airedS
         <div className="space-y-2 text-sm">
           {[
             { label: 'Cast (per episode)', val: [...draft.mainCast, ...draft.supportingCast].reduce((s, c) => s + c.weeklyFee, 0) },
-            { label: 'Key Crew (per episode)', val: (draft.director?.episodeFee ?? 0) + (draft.writer?.episodeFee ?? 0) },
+            { label: 'Key Crew (per episode)', val: (draft.director?.episodeFee ?? 0) + (draft.writer?.episodeFee ?? 0) + (draft.showrunner?.episodeFee ?? 0) },
             { label: 'Guest Stars / Extras / Stunts', val: draft.guestStarBudget + draft.extrasBudget + draft.stuntBudget },
             { label: 'Production (per episode)', val: Object.values(draft.production).reduce((s, v) => s + v, 0) },
             { label: 'Post-Production (per episode)', val: Object.values(draft.postProduction).reduce((s, v) => s + v, 0) },

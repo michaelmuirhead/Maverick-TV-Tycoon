@@ -3,13 +3,13 @@ import React, { useState } from 'react';
 import { ShowDraft, CastMember, CrewMember, Genre } from '@/types/game';
 import { CAST_POOL, CREW_POOL } from '@/data/castPool';
 import { useGameStore } from '@/store/gameStore';
+import { calcCastChemistry, formatMoney } from '@/lib/gameLogic';
 
 const PHASE_DOT: Record<string, string> = {
   rising: 'text-emerald-400',
   peak: 'text-amber-400',
   declining: 'text-zinc-500',
 };
-import { formatMoney } from '@/lib/gameLogic';
 
 interface Props {
   draft: ShowDraft;
@@ -27,10 +27,10 @@ function StarRating({ level }: { level: number }) {
 }
 
 function CastCard({
-  member, hired, onToggle, contracted, rivalContracted,
+  member, hired, onToggle, contracted, rivalContracted, isDev,
 }: {
   member: CastMember; hired: boolean; onToggle: () => void;
-  contracted?: boolean; rivalContracted?: boolean;
+  contracted?: boolean; rivalContracted?: boolean; isDev?: boolean;
 }) {
   const isDisabled = contracted || rivalContracted;
   return (
@@ -53,7 +53,8 @@ function CastCard({
           <div className={`text-xs font-bold tabular-nums ${hired ? 'text-amber-400' : 'text-zinc-500'}`}>
             {formatMoney(member.weeklyFee)}/ep
           </div>
-          {contracted && <span className="text-xs text-rose-400 font-semibold block mt-0.5">On Show</span>}
+          {isDev && <span className="text-xs text-emerald-400 font-semibold block mt-0.5">🌱 Developing</span>}
+          {contracted && !isDev && <span className="text-xs text-rose-400 font-semibold block mt-0.5">On Show</span>}
           {rivalContracted && <span className="text-xs text-purple-400 font-semibold block mt-0.5">Rival Studio</span>}
         </div>
       </div>
@@ -63,6 +64,9 @@ function CastCard({
             {member.careerPhase === 'rising' ? '📈' : member.careerPhase === 'declining' ? '📉' : '⭐'}
             {member.age !== undefined ? ` ${member.age}` : ''}
           </span>
+        )}
+        {member.developmentWeeks !== undefined && (
+          <span className="text-xs bg-emerald-950/60 text-emerald-500 px-1.5 py-0.5 rounded">W{member.developmentWeeks} dev</span>
         )}
         {member.genre.slice(0, 3).map((g) => (
           <span key={g} className="text-xs bg-zinc-700/60 text-zinc-400 px-1.5 py-0.5 rounded">{g}</span>
@@ -116,6 +120,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
   const activeProductions = useGameStore((s) => s.studio?.activeProductions ?? []);
   const liveCast = useGameStore((s) => s.studio?.talentPool?.cast ?? CAST_POOL);
   const liveCrew = useGameStore((s) => s.studio?.talentPool?.crew ?? CREW_POOL);
+  const developmentRoster = useGameStore((s) => s.studio?.developmentRoster ?? []);
 
   // IDs of actors locked into other active productions
   const contractedIds = new Set(
@@ -124,6 +129,8 @@ export default function CastCrew({ draft, onUpdate }: Props) {
       ...p.draft.supportingCast.map((c) => c.id),
     ])
   );
+
+  const devRosterIds = new Set(developmentRoster.map((c) => c.id));
 
   const mainCastIds = new Set(draft.mainCast.map((c) => c.id));
   const supportingIds = new Set(draft.supportingCast.map((c) => c.id));
@@ -147,6 +154,8 @@ export default function CastCrew({ draft, onUpdate }: Props) {
   const castEpCost = [...draft.mainCast, ...draft.supportingCast].reduce((s, c) => s + c.weeklyFee, 0);
   const dirCost = draft.director?.episodeFee ?? 0;
   const writerCost = draft.writer?.episodeFee ?? 0;
+  const showrunnerCost = draft.showrunner?.episodeFee ?? 0;
+  const chemistry = calcCastChemistry(draft.mainCast);
 
   // Filter out fully unavailable; show rival-contracted and on-show as disabled
   const availableMain = liveCast.filter(
@@ -157,6 +166,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
   );
   const directors = liveCrew.filter((c) => c.role === 'director');
   const writers = liveCrew.filter((c) => c.role === 'writer');
+  const showrunners = liveCrew.filter((c) => c.role === 'showrunner');
 
   const TABS: { id: Tab; label: string; shortLabel: string }[] = [
     { id: 'main', label: `Main (${draft.mainCast.length}/5)`, shortLabel: `Main ${draft.mainCast.length}/5` },
@@ -170,7 +180,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
       {/* Cost Summary Bar */}
       <div className="bg-zinc-800/60 rounded-xl p-3 flex items-center justify-between">
         <span className="text-xs text-zinc-500">Cast & Crew cost per episode</span>
-        <span className="text-amber-400 font-bold tabular-nums">{formatMoney(castEpCost + dirCost + writerCost)}</span>
+        <span className="text-amber-400 font-bold tabular-nums">{formatMoney(castEpCost + dirCost + writerCost + showrunnerCost)}</span>
       </div>
 
       {/* Tabs */}
@@ -193,6 +203,24 @@ export default function CastCrew({ draft, onUpdate }: Props) {
       {tab === 'main' && (
         <div className="space-y-3">
           <p className="text-xs text-zinc-500">Select up to 5 lead actors. Higher star level = better quality boost.</p>
+
+          {/* Chemistry indicator */}
+          {draft.mainCast.length >= 2 && (
+            <div className="flex items-center gap-2 bg-zinc-800/60 rounded-xl px-3 py-2">
+              <span className="text-sm">🧪</span>
+              <span className="text-xs text-zinc-400 flex-shrink-0">Cast Chemistry</span>
+              <div className="flex-1 h-1.5 rounded-full bg-zinc-700 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${chemistry >= 4 ? 'bg-emerald-500' : chemistry >= 0 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                  style={{ width: `${((chemistry + 8) / 16) * 100}%` }}
+                />
+              </div>
+              <span className={`text-xs font-bold tabular-nums flex-shrink-0 ${chemistry >= 4 ? 'text-emerald-400' : chemistry >= 0 ? 'text-amber-400' : 'text-rose-400'}`}>
+                {chemistry > 0 ? '+' : ''}{chemistry.toFixed(1)}
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
             {availableMain.map((m) => (
               <CastCard
@@ -202,6 +230,7 @@ export default function CastCrew({ draft, onUpdate }: Props) {
                 onToggle={() => toggleMain(m)}
                 contracted={contractedIds.has(m.id) && !mainCastIds.has(m.id)}
                 rivalContracted={m.status === 'rival-contracted'}
+                isDev={devRosterIds.has(m.id)}
               />
             ))}
           </div>
@@ -230,6 +259,22 @@ export default function CastCrew({ draft, onUpdate }: Props) {
       {/* Key Crew */}
       {tab === 'crew' && (
         <div className="space-y-5">
+          <div>
+            <h4 className="text-sm font-semibold text-zinc-300 mb-1">
+              Showrunner {draft.showrunner ? `— ${draft.showrunner.name}` : <span className="font-normal text-zinc-600">(optional)</span>}
+            </h4>
+            <p className="text-xs text-zinc-500 mb-2">Sets a quality floor and adds a bonus. Genre specialists give the biggest boost.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+              {showrunners.map((s) => (
+                <CrewCard
+                  key={s.id} member={s}
+                  hired={draft.showrunner?.id === s.id}
+                  onHire={() => onUpdate({ showrunner: draft.showrunner?.id === s.id ? null : s })}
+                  draftGenre={draft.genre}
+                />
+              ))}
+            </div>
+          </div>
           <div>
             <h4 className="text-sm font-semibold text-zinc-300 mb-2">Director {draft.director ? `— ${draft.director.name}` : ''}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">

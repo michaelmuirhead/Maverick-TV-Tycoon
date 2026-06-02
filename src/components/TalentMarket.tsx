@@ -5,6 +5,8 @@ import { CastMember, CrewMember } from '@/types/game';
 import { CAST_POOL, CREW_POOL } from '@/data/castPool';
 import { formatMoney } from '@/lib/gameLogic';
 
+const DEV_SIGNUP_FEE = 50_000;
+
 type Tab = 'cast' | 'crew';
 
 function StarRating({ level }: { level: number }) {
@@ -35,8 +37,9 @@ function CareerBadge({ phase, age }: { phase?: string; age?: number }) {
   );
 }
 
-function CastCard({ member }: { member: CastMember }) {
+function CastCard({ member, onDevelop, canDevelop }: { member: CastMember; onDevelop?: () => void; canDevelop?: boolean }) {
   const badge = STATUS_BADGE[member.status] ?? STATUS_BADGE.available;
+  const showDevelopBtn = member.status === 'available' && member.starLevel <= 2 && onDevelop;
   return (
     <div className={`bg-zinc-900 border rounded-xl p-4 transition-all ${member.status === 'available' ? 'border-zinc-800 hover:border-zinc-600' : 'border-zinc-800 opacity-70'}`}>
       <div className="flex justify-between items-start mb-1.5">
@@ -54,7 +57,19 @@ function CastCard({ member }: { member: CastMember }) {
           <span key={g} className="text-xs bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded">{g}</span>
         ))}
       </div>
-      <div className="text-xs text-zinc-500">Fee: <span className="font-bold text-zinc-300 tabular-nums">{formatMoney(member.weeklyFee)}/episode</span></div>
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-zinc-500">Fee: <span className="font-bold text-zinc-300 tabular-nums">{formatMoney(member.weeklyFee)}/episode</span></div>
+        {showDevelopBtn && (
+          <button
+            onClick={onDevelop}
+            disabled={!canDevelop}
+            className="text-xs px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/60 border border-emerald-700/60 text-emerald-300 font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            title={`Sign to development for ${formatMoney(DEV_SIGNUP_FEE)}`}
+          >
+            🌱 Develop
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -92,6 +107,9 @@ function CrewCard({ member }: { member: CrewMember }) {
 export default function TalentMarket() {
   const studio = useGameStore(s => s.studio);
   const setScreen = useGameStore(s => s.setScreen);
+  const signToDevelopment = useGameStore(s => s.signToDevelopment);
+  const releaseDevelopmentActor = useGameStore(s => s.releaseDevelopmentActor);
+  const spendMoney = useGameStore(s => s.spendMoney);
   const [tab, setTab] = useState<Tab>('cast');
   const [starFilter, setStarFilter] = useState<number | null>(null);
 
@@ -134,8 +152,40 @@ export default function TalentMarket() {
 
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-5 md:space-y-6">
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-400">
-          Browse available talent. Hire cast and crew during <strong className="text-zinc-200">Show Creation</strong> to add them to your productions. Talent contracted to active shows is marked accordingly.
+          Browse available talent. Hire cast and crew during <strong className="text-zinc-200">Show Creation</strong> to add them to your productions. Sign rising actors to <strong className="text-zinc-200">development</strong> to grow their star level over time.
         </div>
+
+        {/* Development Roster */}
+        {(studio.developmentRoster ?? []).length > 0 && (
+          <div className="bg-zinc-900 border border-emerald-800/40 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-emerald-300">🌱 Development Roster</h2>
+              <span className="text-xs text-zinc-500">{formatMoney(3_000)}/week per actor</span>
+            </div>
+            <div className="space-y-2">
+              {(studio.developmentRoster ?? []).map(actor => (
+                <div key={actor.id} className="flex items-center gap-3 bg-zinc-800/50 rounded-xl px-3 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-white">{actor.name}</span>
+                      <span className="text-xs">{'⭐'.repeat(actor.starLevel)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-zinc-500">Week {actor.developmentWeeks ?? 0} in dev</span>
+                      <span className="text-xs text-emerald-500">Chance to improve each week</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => releaseDevelopmentActor(actor.id)}
+                    className="text-xs px-2.5 py-1 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-300 rounded-lg transition-all flex-shrink-0"
+                  >
+                    Release
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
@@ -159,7 +209,17 @@ export default function TalentMarket() {
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {tab === 'cast'
-            ? filteredCast.map(c => <CastCard key={c.id} member={c} />)
+            ? filteredCast.map(c => (
+                <CastCard
+                  key={c.id}
+                  member={c}
+                  onDevelop={c.status === 'available' && c.starLevel <= 2 ? () => {
+                    spendMoney(DEV_SIGNUP_FEE);
+                    signToDevelopment(c.id);
+                  } : undefined}
+                  canDevelop={studio.money >= DEV_SIGNUP_FEE}
+                />
+              ))
             : filteredCrew.map(c => <CrewCard key={c.id} member={c} />)
           }
         </div>

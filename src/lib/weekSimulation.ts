@@ -1,10 +1,10 @@
 import {
   Studio, ActiveProduction, GameEvent, RenewalOffer, AiredShow,
-  AwardNomination, RivalStudio, RivalShow, Genre,
+  AwardNomination, RivalStudio, RivalShow, Genre, PassiveIncomeStream,
 } from '@/types/game';
 import { NETWORKS } from '@/data/networks';
 import { RIVAL_STUDIOS } from '@/data/rivals';
-import { calcEpisodeCost } from '@/lib/gameLogic';
+import { calcEpisodeCost, formatMoney } from '@/lib/gameLogic';
 import { BUILDING_CONFIG } from '@/data/buildings';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -503,7 +503,7 @@ function processRivalAI(rivals: RivalStudio[], genrePopularity: Record<string, n
     }
 
     // Rivals' reputation drifts slowly toward 50
-    updated.reputation = clamp(rival.reputation + (rng() - 0.52) * 2, 20, 95);
+    updated.reputation = Math.round(clamp(rival.reputation + (rng() - 0.52) * 2, 20, 95));
 
     return updated;
   });
@@ -663,6 +663,8 @@ export function advanceWeek(studio: Studio): WeekResult {
   );
   money -= buildingMaintenance;
   let awardsSeasonYear = studio.awardsSeasonYear;
+  let passiveIncomeStreams = [...(studio.passiveIncomeStreams ?? [])];
+  let developmentRoster = [...(studio.developmentRoster ?? [])];
   let processedAwardCeremonies = { ...(studio.processedAwardCeremonies ?? {}) };
   let networkReachModifiers = { ...(studio.networkReachModifiers ?? {}) };
 
@@ -806,6 +808,77 @@ export function advanceWeek(studio: Studio): WeekResult {
   const completedNow = activeProductions.filter(p => p.status === 'completed');
   const stillRunning = activeProductions.filter(p => p.status !== 'completed');
   const newAiredShows = completedNow.map(productionToAiredShow);
+
+  // ── passive income: merch + streaming residuals ──────────────────────────
+  for (const aired of newAiredShows) {
+    const avgAudienceScore = aired.avgAudienceScore ?? 0;
+    const network = NETWORKS.find(n => n.id === aired.deal.networkId);
+
+    // Merchandise licensing for shows with strong audience scores
+    if (avgAudienceScore >= 65) {
+      const weeklyIncome = Math.round(aired.avgRating * (avgAudienceScore / 100) * 4500);
+      const absExpiry = (newYear - 1) * 52 + newWeek + 52;
+      const expiresYear = Math.floor((absExpiry - 1) / 52) + 1;
+      const expiresWeek = ((absExpiry - 1) % 52) + 1;
+      passiveIncomeStreams.push({
+        id: uid(), type: 'merchandise',
+        showId: aired.id, showTitle: aired.draft.title,
+        weeklyIncome, expiresWeek, expiresYear,
+      });
+      newEvents.push({
+        id: uid(), type: 'financial', week: newWeek, year: newYear,
+        headline: `🛍️ Merchandise deal for "${aired.draft.title}"`,
+        description: `Strong audience scores attracted licensing partners. Earning ${formatMoney(weeklyIncome)}/week for 1 year.`,
+        impact: {}, isRead: false,
+      });
+    }
+
+    // Streaming residuals for broadcast/cable shows bought by streaming platforms
+    if ((network?.type === 'broadcast' || network?.type === 'cable') &&
+        avgAudienceScore >= 70 && aired.avgRating >= 1.5 && rng() < 0.60) {
+      const weeklyIncome = Math.round(aired.avgRating * 3500);
+      const absExpiry = (newYear - 1) * 52 + newWeek + 26;
+      const expiresYear = Math.floor((absExpiry - 1) / 52) + 1;
+      const expiresWeek = ((absExpiry - 1) % 52) + 1;
+      passiveIncomeStreams.push({
+        id: uid(), type: 'streaming-residual',
+        showId: aired.id, showTitle: aired.draft.title,
+        weeklyIncome, expiresWeek, expiresYear,
+        networkName: 'StreamVault',
+      });
+      newEvents.push({
+        id: uid(), type: 'financial', week: newWeek, year: newYear,
+        headline: `📡 StreamVault picks up "${aired.draft.title}"`,
+        description: `Streaming rights sold for ${formatMoney(weeklyIncome)}/week over 6 months.`,
+        impact: {}, isRead: false,
+      });
+    }
+  }
+
+  // Process existing passive income streams
+  const activeStreams = passiveIncomeStreams.filter(s =>
+    s.expiresYear > newYear || (s.expiresYear === newYear && s.expiresWeek >= newWeek)
+  );
+  const passiveIncomeTotal = activeStreams.reduce((sum, s) => sum + s.weeklyIncome, 0);
+  money += passiveIncomeTotal;
+  passiveIncomeStreams = activeStreams;
+
+  // ── development roster ────────────────────────────────────────────────────
+  developmentRoster = developmentRoster.map(actor => {
+    money -= 3000;
+    const updated = { ...actor, developmentWeeks: (actor.developmentWeeks ?? 0) + 1 };
+    if (updated.starLevel < 3 && rng() < 0.04) {
+      const newLevel = (updated.starLevel + 1) as 1 | 2 | 3 | 4 | 5;
+      newEvents.push({
+        id: uid(), type: 'talent-news', week: newWeek, year: newYear,
+        headline: `📈 ${actor.name} levelled up to ${newLevel}★`,
+        description: `Your development investment is paying off — ${actor.name} is now ${newLevel}-star talent.`,
+        impact: {}, isRead: false,
+      });
+      return { ...updated, starLevel: newLevel };
+    }
+    return updated;
+  });
 
   // Apply reach impact from completed productions
   for (const prod of completedNow) {

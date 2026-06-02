@@ -20,7 +20,7 @@ function RivalCard({ rival }: { rival: RivalStudio }) {
           </div>
         </div>
         <div className={`text-right`}>
-          <div className={`text-lg font-bold tabular-nums ${repColor}`}>{rival.reputation}</div>
+          <div className={`text-lg font-bold tabular-nums ${repColor}`}>{Math.round(rival.reputation)}</div>
           <div className="text-xs text-zinc-600">reputation</div>
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function RivalStudios() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-lg font-bold text-amber-400">{studio.reputation}</div>
+              <div className="text-lg font-bold text-amber-400">{Math.round(studio.reputation)}</div>
               <div className="text-xs text-zinc-600">reputation</div>
             </div>
           </div>

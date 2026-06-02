@@ -1,4 +1,4 @@
-import { ShowDraft, Network, Genre, StudioBuilding, BuildingTier, CrewMember, AiredShow } from '@/types/game';
+import { ShowDraft, Network, Genre, StudioBuilding, BuildingTier, CrewMember, AiredShow, CastMember } from '@/types/game';
 import { GENRE_PROFILES } from '@/data/genres';
 import { BUILDING_CONFIG, TIER_ORDER } from '@/data/buildings';
 
@@ -29,6 +29,22 @@ export function calcCrewGenreMultiplier(member: CrewMember, genre: Genre): numbe
 /** @deprecated use calcCrewGenreMultiplier */
 export const calcWriterGenreMultiplier = calcCrewGenreMultiplier;
 
+export function calcCastChemistry(mainCast: CastMember[]): number {
+  if (mainCast.length < 2) return 0;
+  const levels = mainCast.map(c => c.starLevel);
+  const avgLevel = levels.reduce((a, b) => a + b, 0) / levels.length;
+  const variance = levels.reduce((s, l) => s + Math.abs(l - avgLevel), 0) / levels.length;
+  const levelScore = Math.max(-5, 4 - variance * 2.5);
+  const phases = mainCast.map(c => c.careerPhase ?? 'peak');
+  const risingCount = phases.filter(p => p === 'rising').length;
+  const decliningCount = phases.filter(p => p === 'declining').length;
+  const phaseScore = risingCount >= 2 ? 2 : decliningCount >= 2 ? -3 : 0;
+  const allGenres = mainCast.flatMap(c => c.genre);
+  const genreCounts = allGenres.reduce((acc, g) => ({ ...acc, [g]: (acc[g] ?? 0) + 1 }), {} as Record<string, number>);
+  const overlapScore = Math.min(3, Object.values(genreCounts).filter(v => v > 1).length * 0.7);
+  return Math.max(-8, Math.min(8, levelScore + phaseScore + overlapScore));
+}
+
 export function calcCastQuality(draft: ShowDraft): number {
   const allCast = [...draft.mainCast, ...draft.supportingCast];
   if (!allCast.length) return 0;
@@ -44,7 +60,16 @@ export function calcCastQuality(draft: ShowDraft): number {
   const extras = Math.min(5, (draft.extrasBudget / 50000) * 2);
   const stunt = Math.min(5, (draft.stuntBudget / 100000) * 2);
 
-  return clamp(starAvg * 14 + mainBonus * 0.2 + directorBonus * 0.4 + writerBonus * 0.3 + guestBonus + extras + stunt, 0, 100);
+  const chemistry = calcCastChemistry(draft.mainCast);
+  return clamp(starAvg * 14 + mainBonus * 0.2 + directorBonus * 0.4 + writerBonus * 0.3 + guestBonus + extras + stunt + chemistry, 0, 100);
+}
+
+export function calcShowrunnerBonus(showrunner: CrewMember | null | undefined, genre: Genre): { floor: number; bonus: number } {
+  if (!showrunner) return { floor: 0, bonus: 0 };
+  const mult = calcCrewGenreMultiplier(showrunner, genre);
+  const floor = (showrunner.level - 1) * 7;
+  const bonus = Math.round(showrunner.level * 3 * mult);
+  return { floor, bonus };
 }
 
 export function calcProductionQuality(draft: ShowDraft, tierBonus = 0): number {
@@ -118,6 +143,10 @@ export function calcShowQuality(
 
   // Creative genius: exceptional genre fit gives a non-linear bonus (up to +10 pts at perfect fit)
   if (creativeQ >= 80) quality += (creativeQ - 80) * 0.5;
+
+  const { floor, bonus } = calcShowrunnerBonus(draft.showrunner, draft.genre);
+  if (floor > 0) quality = Math.max(quality, floor);
+  quality = Math.min(100, quality + bonus);
 
   return Math.round(clamp(quality, 0, 100));
 }
@@ -214,6 +243,7 @@ export function calcEpisodeCost(draft: ShowDraft): number {
   const crewCost =
     (draft.director?.episodeFee ?? 0) +
     (draft.writer?.episodeFee ?? 0) +
+    (draft.showrunner?.episodeFee ?? 0) +
     draft.guestStarBudget +
     draft.extrasBudget +
     draft.stuntBudget;
@@ -327,6 +357,7 @@ export function createDefaultDraft(): ShowDraft {
     supportingCast: [],
     director: null,
     writer: null,
+    showrunner: null,
     guestStarBudget: 0,
     extrasBudget: 10000,
     stuntBudget: 0,
