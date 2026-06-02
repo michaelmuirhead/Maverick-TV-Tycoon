@@ -3,6 +3,12 @@ import React, { useState } from 'react';
 import { ShowDraft, CastMember, CrewMember, Genre } from '@/types/game';
 import { CAST_POOL, CREW_POOL } from '@/data/castPool';
 import { useGameStore } from '@/store/gameStore';
+
+const PHASE_DOT: Record<string, string> = {
+  rising: 'text-emerald-400',
+  peak: 'text-amber-400',
+  declining: 'text-zinc-500',
+};
 import { formatMoney } from '@/lib/gameLogic';
 
 interface Props {
@@ -51,7 +57,13 @@ function CastCard({
           {rivalContracted && <span className="text-xs text-purple-400 font-semibold block mt-0.5">Rival Studio</span>}
         </div>
       </div>
-      <div className="mt-1.5 flex flex-wrap gap-1">
+      <div className="mt-1.5 flex flex-wrap gap-1 items-center">
+        {member.careerPhase && (
+          <span className={`text-xs ${PHASE_DOT[member.careerPhase] ?? ''}`}>
+            {member.careerPhase === 'rising' ? '📈' : member.careerPhase === 'declining' ? '📉' : '⭐'}
+            {member.age !== undefined ? ` ${member.age}` : ''}
+          </span>
+        )}
         {member.genre.slice(0, 3).map((g) => (
           <span key={g} className="text-xs bg-zinc-700/60 text-zinc-400 px-1.5 py-0.5 rounded">{g}</span>
         ))}
@@ -102,6 +114,8 @@ export default function CastCrew({ draft, onUpdate }: Props) {
   const [tab, setTab] = useState<Tab>('main');
 
   const activeProductions = useGameStore((s) => s.studio?.activeProductions ?? []);
+  const liveCast = useGameStore((s) => s.studio?.talentPool?.cast ?? CAST_POOL);
+  const liveCrew = useGameStore((s) => s.studio?.talentPool?.crew ?? CREW_POOL);
 
   // IDs of actors locked into other active productions
   const contractedIds = new Set(
@@ -135,14 +149,14 @@ export default function CastCrew({ draft, onUpdate }: Props) {
   const writerCost = draft.writer?.episodeFee ?? 0;
 
   // Filter out fully unavailable; show rival-contracted and on-show as disabled
-  const availableMain = CAST_POOL.filter(
+  const availableMain = liveCast.filter(
     (c) => c.role === 'main' && c.status !== 'unavailable' && !supportingIds.has(c.id)
   );
-  const availableSupporting = CAST_POOL.filter(
+  const availableSupporting = liveCast.filter(
     (c) => c.role === 'supporting' && c.status !== 'unavailable' && !mainCastIds.has(c.id)
   );
-  const directors = CREW_POOL.filter((c) => c.role === 'director');
-  const writers = CREW_POOL.filter((c) => c.role === 'writer');
+  const directors = liveCrew.filter((c) => c.role === 'director');
+  const writers = liveCrew.filter((c) => c.role === 'writer');
 
   const TABS: { id: Tab; label: string; shortLabel: string }[] = [
     { id: 'main', label: `Main (${draft.mainCast.length}/5)`, shortLabel: `Main ${draft.mainCast.length}/5` },

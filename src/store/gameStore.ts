@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   Studio, ShowDraft, NetworkDeal, GameScreen, Genre,
-  ActiveProduction, StudioBuilding, BuildingType,
+  ActiveProduction, StudioBuilding, BuildingType, GameEvent,
 } from '@/types/game';
 import {
   createDefaultDraft, calcShowQuality,
@@ -14,6 +14,8 @@ import { NETWORKS } from '@/data/networks';
 import { RIVAL_STUDIOS } from '@/data/rivals';
 import { GENRE_PROFILES } from '@/data/genres';
 import { BUILDING_CONFIG, DEFAULT_BUILDINGS, getNextTier } from '@/data/buildings';
+import { CAST_POOL, CREW_POOL } from '@/data/castPool';
+import { seedTalentPool, runAnnualTalentCycle } from '@/lib/talentLifecycle';
 
 interface GameState {
   screen: GameScreen;
@@ -73,6 +75,7 @@ export const useGameStore = create<GameState>()(
             networkSlots: {},
             genrePopularity: initialPopularity,
             buildings: [...DEFAULT_BUILDINGS],
+            talentPool: seedTalentPool(CAST_POOL, CREW_POOL),
           },
         });
       },
@@ -183,6 +186,47 @@ export const useGameStore = create<GameState>()(
         const { studio } = get();
         if (!studio) return;
         const { studio: updated } = simulateWeek(studio);
+
+        // Run the talent lifecycle once per year (when week just rolled over to 1)
+        const yearJustChanged = studio.week === 52;
+        if (yearJustChanged && updated.talentPool) {
+          const { cast, crew, retirements, levelUps } = runAnnualTalentCycle(updated.talentPool);
+
+          const talentEvents: GameEvent[] = [
+            ...retirements.map(r => ({
+              id: Math.random().toString(36).slice(2),
+              type: 'talent-news' as const,
+              week: updated.week,
+              year: updated.year,
+              headline: `${r.name} announces retirement`,
+              description: `The ${r.level >= 5 ? 'legendary' : 'acclaimed'} ${r.role} has hung up their ${r.role === 'director' ? 'megaphone' : r.role === 'writer' ? 'pen' : 'script'} after a storied career.`,
+              impact: {},
+              isRead: false,
+            })),
+            ...levelUps
+              .filter(lu => lu.newLevel >= 4)
+              .map(lu => ({
+                id: Math.random().toString(36).slice(2),
+                type: 'talent-news' as const,
+                week: updated.week,
+                year: updated.year,
+                headline: `${lu.name} has a career-defining year`,
+                description: `The ${lu.role} is turning heads industry-wide, now considered ${lu.newLevel >= 5 ? 'a top-tier A-lister' : 'a major player'}.`,
+                impact: {},
+                isRead: false,
+              })),
+          ];
+
+          set({
+            studio: {
+              ...updated,
+              talentPool: { cast, crew },
+              events: [...talentEvents, ...updated.events].slice(0, 80),
+            },
+          });
+          return;
+        }
+
         set({ studio: updated });
       },
 

@@ -44,6 +44,8 @@ export interface CastMember {
   weeklyFee: number;
   genre: Genre[];
   status: 'available' | 'contracted' | 'rival-contracted' | 'unavailable';
+  age?: number;
+  careerPhase?: 'rising' | 'peak' | 'declining';
 }
 
 export interface CrewMember {
@@ -55,6 +57,8 @@ export interface CrewMember {
   status: 'available' | 'contracted' | 'rival-contracted';
   genreStrengths?: Genre[];
   genreWeaknesses?: Genre[];
+  age?: number;
+  careerPhase?: 'rising' | 'peak' | 'declining';
 }
 
 export interface ProductionBudget {
@@ -270,4 +274,5 @@ export interface Studio {
   networkSlots: Record<string, number>;
   genrePopularity: Record<string, number>;
   buildings?: StudioBuilding[];
+  talentPool?: { cast: CastMember[]; crew: CrewMember[] };
 }
