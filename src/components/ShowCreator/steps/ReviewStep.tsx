@@ -4,7 +4,7 @@ import { ShowDraft, AiredShow } from '@/types/game';
 import {
   calcShowQuality, calcEpisodeCost, calcCastQuality,
   calcProductionQuality, calcPostProductionQuality, calcCreativeGenreFit,
-  formatMoney, getQualityLabel, calcParentBoost,
+  formatMoney, getQualityLabel, calcParentBoost, calcRevivalBoost,
 } from '@/lib/gameLogic';
 import QualityMeter from '@/components/ui/QualityMeter';
 import { GENRE_PROFILES } from '@/data/genres';
@@ -48,6 +48,8 @@ export default function ReviewStep({ draft, studioMoney, buildingBonuses, airedS
   const { color } = getQualityLabel(quality);
   const parentBoost = airedShows ? calcParentBoost(draft, airedShows) : 0;
   const parentShow = parentBoost > 0 && draft.parentShowId ? airedShows?.find(s => s.id === draft.parentShowId) : null;
+  const revivalBoost = airedShows ? calcRevivalBoost(draft, airedShows) : 0;
+  const revivalParent = revivalBoost > 0 && draft.revivedFromShowId ? airedShows?.find(s => s.id === draft.revivedFromShowId) : null;
 
   return (
     <div className="space-y-6">
@@ -100,6 +102,61 @@ export default function ReviewStep({ draft, studioMoney, buildingBonuses, airedS
             </div>
             <div className="text-xs text-zinc-500">base rating</div>
           </div>
+        </div>
+      )}
+
+      {/* Revival Boost */}
+      {revivalParent && (
+        <div className="rounded-2xl p-4 border bg-amber-950/30 border-amber-800/50 flex items-center gap-4">
+          <span className="text-3xl flex-shrink-0">📡</span>
+          <div className="flex-1">
+            <div className="font-bold text-sm text-amber-300">Revival Bonus</div>
+            <div className="text-xs text-zinc-400 mt-0.5">
+              Continuing &quot;{revivalParent.draft.title}&quot; (Q{revivalParent.quality} · {revivalParent.avgRating}M avg) on a new network
+            </div>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <div className="text-xl font-black tabular-nums text-amber-400">+{Math.round(revivalBoost * 100)}%</div>
+            <div className="text-xs text-zinc-500">base rating</div>
+          </div>
+        </div>
+      )}
+
+      {/* Special Episodes */}
+      {(draft.flashbackEpisode || draft.twoPartFinale || draft.plannedEnding) && (
+        <div className="rounded-2xl p-4 border bg-zinc-900 border-zinc-800 space-y-2">
+          <div className="text-xs font-semibold text-zinc-400 mb-2">✨ Special Episode Features</div>
+          {draft.plannedEnding && (
+            <div className="flex items-start gap-2">
+              <span className="text-base flex-shrink-0">📖</span>
+              <div>
+                <div className="text-sm font-semibold text-amber-300">Planned Series Finale</div>
+                <div className="text-xs text-zinc-500">This is the final season — gives the show a proper ending</div>
+              </div>
+            </div>
+          )}
+          {draft.flashbackEpisode && (
+            <div className="flex items-start gap-2">
+              <span className="text-base flex-shrink-0">📼</span>
+              <div>
+                <div className="text-sm font-semibold text-zinc-200">
+                  Flashback Episode {draft.flashbackEpisodeNum ? `(Ep ${draft.flashbackEpisodeNum})` : ''}
+                </div>
+                <div className="text-xs text-zinc-500">+10% ratings · audience +15 · critics −8</div>
+              </div>
+            </div>
+          )}
+          {draft.twoPartFinale && (
+            <div className="flex items-start gap-2">
+              <span className="text-base flex-shrink-0">🎬</span>
+              <div>
+                <div className="text-sm font-semibold text-zinc-200">
+                  Two-Part Finale (Eps {draft.episodeCount - 1}–{draft.episodeCount})
+                </div>
+                <div className="text-xs text-zinc-500">+22% finale ratings · critics +12 · audience +10</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

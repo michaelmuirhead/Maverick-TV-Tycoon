@@ -181,14 +181,32 @@ function maybeGenerateEvent(
 
 // ─── renewal logic ───────────────────────────────────────────────────────────
 
-function shouldRenew(avgRating: number, networkType: string, quality: number): boolean {
-  const thresholds: Record<string, number> = {
-    broadcast: 3.5, cable: 1.8, premium: 0.8, streaming: 1.2,
-    international: 1.0, specialty: 0.6,
-  };
-  const threshold = thresholds[networkType] ?? 2;
-  // Quality also plays a role: prestige shows get renewed below ratings threshold
-  return avgRating >= threshold || (quality >= 82 && avgRating >= threshold * 0.7);
+const RENEWAL_THRESHOLDS: Record<string, number> = {
+  broadcast: 3.5, cable: 1.8, premium: 0.8, streaming: 1.2,
+  international: 1.0, specialty: 0.6,
+};
+
+export function calcNetworkRenewalScore(
+  avgRating: number,
+  network: { type: string; preferredGenres: string[]; budgetPerEpisode: { min: number; max: number } },
+  prod: { quality: number; networkFit: number; seasonNumber: number; draft: { genre: string } },
+): number {
+  const threshold = RENEWAL_THRESHOLDS[network.type] ?? 2;
+  // Ratings vs threshold (0-40 pts)
+  const ratingScore = clamp((avgRating / threshold) * 30, 0, 40);
+  // Quality prestige (0-25 pts)
+  const qualityScore = (prod.quality / 100) * 25;
+  // Genre alignment (0-20 pts)
+  const genreScore = network.preferredGenres.includes(prod.draft.genre) ? 20 : 5;
+  // Network fit (0-10 pts)
+  const fitScore = (prod.networkFit / 100) * 10;
+  // Longevity fatigue — shows running too long become less attractive to networks
+  const longevityPenalty = Math.max(0, (prod.seasonNumber - 3) * 4);
+  return clamp(Math.round(ratingScore + qualityScore + genreScore + fitScore - longevityPenalty), 0, 100);
+}
+
+function shouldRenew(score: number): boolean {
+  return score >= 42;
 }
 
 function generateRenewalOffer(
@@ -196,12 +214,33 @@ function generateRenewalOffer(
   avgRating: number,
   week: number,
   year: number,
+  score: number,
 ): RenewalOffer {
   const network = NETWORKS.find(n => n.id === prod.deal.networkId);
   const { min, max } = network?.budgetPerEpisode ?? { min: 100000, max: 500000 };
   const ratingsFactor = clamp(avgRating / (prod.baseRating || 1), 0.5, 1.5);
   const qualityFactor = prod.quality / 100;
-  const payPerEpisode = Math.round((min + (max - min) * ((ratingsFactor + qualityFactor) / 2)) * 1.05);
+
+  // Planned ending when score is low (42-57) or show has run many seasons
+  const plannedEnding = score < 58 || prod.seasonNumber >= 4;
+
+  // Planned endings: fewer episodes, higher per-ep pay (wrapping up is premium)
+  const baseEpisodes = Math.min(prod.totalEpisodes + 2, 24);
+  const episodesOffered = plannedEnding
+    ? Math.max(4, Math.round(baseEpisodes * 0.65))
+    : baseEpisodes;
+
+  const payMultiplier = plannedEnding ? 1.12 : score >= 75 ? 1.06 : 1.02;
+  const payPerEpisode = Math.round(
+    (min + (max - min) * ((ratingsFactor + qualityFactor) / 2)) * payMultiplier
+  );
+
+  // Special episode options — network's creative suggestion
+  const includeFlashback = episodesOffered >= 4 && rng() < (score >= 60 ? 0.55 : 0.35);
+  const includeTwoPartFinale = score >= 55 && rng() < 0.60;
+  const flashbackEpisodeNum = includeFlashback
+    ? Math.max(1, Math.ceil(episodesOffered * 0.70))
+    : undefined;
 
   return {
     id: uid(),
@@ -212,11 +251,16 @@ function generateRenewalOffer(
     genre: prod.draft.genre,
     currentSeason: prod.seasonNumber,
     proposedSeason: prod.seasonNumber + 1,
-    episodesOffered: Math.min(prod.totalEpisodes + 2, 24),
+    episodesOffered,
     payPerEpisode,
     expiresWeek: ((week + 3 - 1) % 52) + 1,
     expiresYear: week + 3 > 52 ? year + 1 : year,
     originalDraft: prod.draft,
+    networkRenewalScore: score,
+    plannedEnding,
+    includeFlashback,
+    includeTwoPartFinale,
+    flashbackEpisodeNum,
   };
 }
 
@@ -495,12 +539,16 @@ export function advanceWeek(studio: Studio): WeekResult {
       const boostedProd = { ...prod, baseRating: prod.baseRating * buzzBoost };
 
       for (let i = prod.currentEpisode; i < prod.totalEpisodes; i++) {
-        const epRating = Math.round(calcEpisodeRating(boostedProd, i) * popularityMult * 10) / 10;
-        const criticScore   = calcEpisodeCriticScore(boostedProd, i + 1);
-        const audienceScore = calcEpisodeAudienceScore(boostedProd, i + 1, studio.genrePopularity ?? {});
+        const epNum = i + 1;
+        const isFlashback = !!(prod.includeFlashback && prod.flashbackEpisodeNum === epNum);
+        const isTwoPartFinale = !!(prod.includeTwoPartFinale && epNum > prod.totalEpisodes - 2);
+        const baseR = Math.round(calcEpisodeRating(boostedProd, i) * popularityMult * 10) / 10;
+        const epRating = Math.round(baseR * (isFlashback ? 1.10 : isTwoPartFinale ? 1.22 : 1.0) * 10) / 10;
+        const criticScore = clamp(calcEpisodeCriticScore(boostedProd, epNum) + (isFlashback ? -8 : 0) + (isTwoPartFinale ? 12 : 0), 0, 100);
+        const audienceScore = clamp(calcEpisodeAudienceScore(boostedProd, epNum, studio.genrePopularity ?? {}) + (isFlashback ? 15 : 0) + (isTwoPartFinale ? 10 : 0), 0, 100);
         money -= calcEpisodeCost(prod.draft);
         money += prod.deal.payPerEpisode;
-        updatedResults.push({ episode: i + 1, rating: epRating, criticScore, audienceScore });
+        updatedResults.push({ episode: epNum, rating: epRating, criticScore, audienceScore });
       }
 
       const dropRating = updatedResults.at(-1)?.rating ?? prod.baseRating;
@@ -518,9 +566,12 @@ export function advanceWeek(studio: Studio): WeekResult {
     const genrePop = studio.genrePopularity?.[prod.draft.genre] ?? 50;
     const popularityMult = 0.6 + (genrePop / 100) * 0.9;
     const epNum = prod.currentEpisode + 1;
-    const epRating = Math.round(calcEpisodeRating(prod, epNum) * popularityMult * 10) / 10;
-    const criticScore   = calcEpisodeCriticScore(prod, epNum);
-    const audienceScore = calcEpisodeAudienceScore(prod, epNum, studio.genrePopularity ?? {});
+    const isFlashback = !!(prod.includeFlashback && prod.flashbackEpisodeNum === epNum);
+    const isTwoPartFinale = !!(prod.includeTwoPartFinale && epNum > prod.totalEpisodes - 2);
+    const baseRating = Math.round(calcEpisodeRating(prod, epNum) * popularityMult * 10) / 10;
+    const epRating = Math.round(baseRating * (isFlashback ? 1.10 : isTwoPartFinale ? 1.22 : 1.0) * 10) / 10;
+    const criticScore = clamp(calcEpisodeCriticScore(prod, epNum) + (isFlashback ? -8 : 0) + (isTwoPartFinale ? 12 : 0), 0, 100);
+    const audienceScore = clamp(calcEpisodeAudienceScore(prod, epNum, studio.genrePopularity ?? {}) + (isFlashback ? 15 : 0) + (isTwoPartFinale ? 10 : 0), 0, 100);
     const epResult = { episode: epNum, rating: epRating, criticScore, audienceScore };
 
     const epCost = calcEpisodeCost(prod.draft);
@@ -562,8 +613,9 @@ export function advanceWeek(studio: Studio): WeekResult {
       : 0;
     const network = NETWORKS.find(n => n.id === prod.deal.networkId);
 
-    if (network && shouldRenew(avgRating, network.type, prod.quality)) {
-      const offer = generateRenewalOffer(prod, avgRating, newWeek, newYear);
+    const renewalScore = network ? calcNetworkRenewalScore(avgRating, network, prod) : 0;
+    if (network && shouldRenew(renewalScore)) {
+      const offer = generateRenewalOffer(prod, avgRating, newWeek, newYear, renewalScore);
       renewalOffers.push(offer);
       newEvents.push({
         id: uid(),

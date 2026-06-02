@@ -292,6 +292,14 @@ export function formatMoney(amount: number): string {
   return `$${amount}`;
 }
 
+export function calcRevivalBoost(draft: ShowDraft, airedShows: AiredShow[]): number {
+  if (!draft.isRevival || !draft.revivedFromShowId) return 0;
+  const parent = airedShows.find((s) => s.id === draft.revivedFromShowId);
+  if (!parent) return 0;
+  // Established fanbase: 8% base + up to 12% based on original quality
+  return 0.08 + (parent.quality / 100) * 0.12;
+}
+
 export function calcParentBoost(draft: ShowDraft, airedShows: AiredShow[]): number {
   if (!draft.parentShowId || !draft.showType) return 0;
   const parent = airedShows.find((s) => s.id === draft.parentShowId);

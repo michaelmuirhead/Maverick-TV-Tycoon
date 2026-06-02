@@ -115,6 +115,13 @@ export interface ShowDraft {
   seasonNumber: number;
   parentShowId?: string;
   showType?: 'spinoff' | 'reboot';
+  isRevival?: boolean;
+  revivedFromShowId?: string;
+  originalNetworkId?: string;
+  plannedEnding?: boolean;
+  flashbackEpisode?: boolean;
+  flashbackEpisodeNum?: number;
+  twoPartFinale?: boolean;
   mainCast: CastMember[];
   supportingCast: CastMember[];
   director: CrewMember | null;
@@ -168,6 +175,10 @@ export interface ActiveProduction {
   hypeLevel?: number;
   marketingSpend?: number;
   wasReshot?: boolean;
+  plannedEnding?: boolean;
+  includeFlashback?: boolean;
+  flashbackEpisodeNum?: number;
+  includeTwoPartFinale?: boolean;
 }
 
 export interface RenewalOffer {
@@ -186,6 +197,11 @@ export interface RenewalOffer {
   originalDraft: ShowDraft;
   negotiationState?: 'counter-accepted' | 'counter-rejected';
   counterPayPerEpisode?: number;
+  networkRenewalScore?: number;
+  plannedEnding?: boolean;
+  includeFlashback?: boolean;
+  flashbackEpisodeNum?: number;
+  includeTwoPartFinale?: boolean;
 }
 
 export interface AiredShow {

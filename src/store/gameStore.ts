@@ -8,7 +8,7 @@ import {
   createDefaultDraft, calcShowQuality,
   calcNetworkFit, calcNetworkOffer,
   getBuildingQualityBonuses, getBuildingCapacity,
-  calcParentBoost,
+  calcParentBoost, calcRevivalBoost,
 } from '@/lib/gameLogic';
 import { advanceWeek as simulateWeek, calcBaseRating } from '@/lib/weekSimulation';
 import { NETWORKS } from '@/data/networks';
@@ -34,10 +34,11 @@ interface GameState {
   upgradeBuilding: (buildingId: string) => void;
   startSpinoff: (airedShowId: string) => void;
   startReboot: (airedShowId: string) => void;
+  startRevival: (airedShowId: string) => void;
   addMarketing: (productionId: string, spend: number, hypeGain: number) => void;
   reshootProduction: (productionId: string) => void;
   negotiateRenewal: (offerId: string, proposedPayPerEpisode: number) => void;
-  acceptRenewal: (offerId: string) => void;
+  acceptRenewal: (offerId: string, options?: { includeFlashback?: boolean; includeTwoPartFinale?: boolean }) => void;
   declineRenewal: (offerId: string) => void;
   markEventsRead: () => void;
   resetGame: () => void;
@@ -135,7 +136,8 @@ export const useGameStore = create<GameState>()(
         };
 
         const parentBoost = calcParentBoost(draft, studio.airedShows);
-        const baseRating = calcBaseRating(quality, networkFit, network.reach) * (1 + parentBoost);
+        const revivalBoost = calcRevivalBoost(draft, studio.airedShows);
+        const baseRating = calcBaseRating(quality, networkFit, network.reach) * (1 + parentBoost + revivalBoost);
 
         const production: ActiveProduction = {
           id: draft.id,
@@ -153,6 +155,10 @@ export const useGameStore = create<GameState>()(
           baseRating,
           startWeek: studio.week,
           startYear: studio.year,
+          plannedEnding: draft.plannedEnding,
+          includeFlashback: draft.flashbackEpisode,
+          flashbackEpisodeNum: draft.flashbackEpisodeNum,
+          includeTwoPartFinale: draft.twoPartFinale,
         };
 
         const repGain = quality >= 75 ? 4 : quality >= 60 ? 2 : 0;
@@ -392,11 +398,40 @@ export const useGameStore = create<GameState>()(
         }
       },
 
-      acceptRenewal: (offerId) => {
+      startRevival: (airedShowId) => {
+        const { studio } = get();
+        if (!studio) return;
+        const parent = studio.airedShows.find((s) => s.id === airedShowId);
+        if (!parent) return;
+        const revivalDraft: ShowDraft = {
+          ...parent.draft,
+          id: crypto.randomUUID(),
+          seasonNumber: parent.seasonNumber + 1,
+          parentShowId: undefined,
+          showType: undefined,
+          isRevival: true,
+          revivedFromShowId: airedShowId,
+          originalNetworkId: parent.deal.networkId,
+          plannedEnding: undefined,
+          flashbackEpisode: undefined,
+          flashbackEpisodeNum: undefined,
+          twoPartFinale: undefined,
+        };
+        set((s) => ({
+          screen: 'show-creator',
+          showCreatorStep: 0,
+          studio: s.studio ? { ...s.studio, currentDraft: revivalDraft } : null,
+        }));
+      },
+
+      acceptRenewal: (offerId, options = {}) => {
         const { studio } = get();
         if (!studio) return;
         const offer = studio.renewalOffers.find(o => o.id === offerId);
         if (!offer) return;
+
+        const finalFlashback = options.includeFlashback ?? offer.includeFlashback ?? false;
+        const finalTwoPartFinale = options.includeTwoPartFinale ?? offer.includeTwoPartFinale ?? false;
 
         const renewDraft: ShowDraft = {
           ...offer.originalDraft,
@@ -404,6 +439,10 @@ export const useGameStore = create<GameState>()(
           seasonNumber: offer.proposedSeason,
           parentShowId: offer.showId,
           episodeCount: offer.episodesOffered,
+          plannedEnding: offer.plannedEnding ?? false,
+          flashbackEpisode: finalFlashback,
+          flashbackEpisodeNum: finalFlashback ? offer.flashbackEpisodeNum : undefined,
+          twoPartFinale: finalTwoPartFinale,
         };
 
         set((s) => ({

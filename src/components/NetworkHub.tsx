@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
-import { calcShowQuality, calcNetworkFit, calcNetworkOffer, formatMoney, getBuildingQualityBonuses, getBuildingCapacity } from '@/lib/gameLogic';
+import { calcShowQuality, calcNetworkFit, calcNetworkOffer, formatMoney, getBuildingQualityBonuses, getBuildingCapacity, calcRevivalBoost } from '@/lib/gameLogic';
 import NetworkCard from '@/components/ui/NetworkCard';
 import QualityMeter from '@/components/ui/QualityMeter';
 import { NETWORKS } from '@/data/networks';
@@ -52,7 +52,11 @@ export default function NetworkHub() {
   const esCapacity = getBuildingCapacity(buildings, 'editing-suite');
   const hasCapacity = studio.buildings === undefined || (rsCapacity > activeCount && esCapacity > activeCount);
 
-  const filtered = filter === 'all' ? NETWORKS : NETWORKS.filter((n) => n.type === filter);
+  const airedShows = studio.airedShows;
+  const revivalBoost = draft.isRevival ? calcRevivalBoost(draft, airedShows) : 0;
+
+  const filtered = (filter === 'all' ? NETWORKS : NETWORKS.filter((n) => n.type === filter))
+    .filter(n => !draft.isRevival || n.id !== draft.originalNetworkId);
 
   const handlePitch = (networkId: string) => {
     const strategy = getStrategy(networkId);
@@ -113,6 +117,27 @@ export default function NetworkHub() {
             </div>
           </div>
         </div>
+
+        {/* Revival banner */}
+        {draft.isRevival && (
+          <div className="bg-amber-950/40 border border-amber-700/60 rounded-2xl p-4 flex items-start gap-4">
+            <span className="text-2xl flex-shrink-0">📡</span>
+            <div className="flex-1">
+              <div className="font-bold text-amber-300 text-sm mb-0.5">Shopping to a New Network</div>
+              <p className="text-xs text-zinc-400">
+                This show was cancelled or didn&apos;t get renewed. You&apos;re pitching Season {draft.seasonNumber} to a new network — the original network is excluded.
+              </p>
+              {revivalBoost > 0 && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs bg-amber-900/50 border border-amber-700/60 text-amber-300 px-2 py-0.5 rounded-full font-semibold">
+                    +{Math.round(revivalBoost * 100)}% established fanbase boost
+                  </span>
+                  <span className="text-xs text-zinc-500">applied to base rating</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Capacity warning */}
         {!hasCapacity && (

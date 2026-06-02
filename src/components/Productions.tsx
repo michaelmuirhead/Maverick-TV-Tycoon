@@ -237,9 +237,15 @@ function RenewalCard({ offer }: { offer: RenewalOffer }) {
   const declineRenewal = useGameStore(s => s.declineRenewal);
   const negotiateRenewal = useGameStore(s => s.negotiateRenewal);
   const [showNegotiate, setShowNegotiate] = useState(false);
+  const [useFlashback, setUseFlashback] = useState(!!offer.includeFlashback);
+  const [useTwoPartFinale, setUseTwoPartFinale] = useState(!!offer.includeTwoPartFinale);
   const network = NETWORKS.find(n => n.id === offer.networkId);
   const genre = GENRE_PROFILES[offer.genre];
+  const score = offer.networkRenewalScore ?? 60;
   const isAccepted = offer.negotiationState === 'counter-accepted';
+
+  const scoreLabel = score >= 80 ? 'Enthusiastic' : score >= 65 ? 'Interested' : score >= 50 ? 'Cautious' : 'Reluctant';
+  const scoreBg = score >= 80 ? 'text-emerald-400' : score >= 65 ? 'text-amber-400' : score >= 50 ? 'text-orange-400' : 'text-rose-400';
 
   const negotiateTiers = [
     { label: `+10%`, pay: Math.round(offer.payPerEpisode * 1.10), prob: 'High chance' },
@@ -249,14 +255,29 @@ function RenewalCard({ offer }: { offer: RenewalOffer }) {
 
   return (
     <div className={`rounded-2xl p-5 border ${isAccepted ? 'bg-emerald-950/50 border-emerald-700/60' : 'bg-emerald-950/40 border-emerald-800/60'}`}>
-      <div className="flex items-start gap-3 mb-4">
+      <div className="flex items-start gap-3 mb-3">
         <span className="text-2xl">📋</span>
-        <div>
-          <h3 className="font-bold text-emerald-300">{offer.showTitle} — Season {offer.proposedSeason}</h3>
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-bold text-emerald-300">{offer.showTitle} — Season {offer.proposedSeason}</h3>
+            {offer.plannedEnding && (
+              <span className="text-xs bg-amber-900/40 border border-amber-700/60 text-amber-300 px-2 py-0.5 rounded-full flex-shrink-0">📖 Final Season</span>
+            )}
+          </div>
           <p className="text-xs text-zinc-500 mt-0.5">{genre.emoji} {genre.label} · {network?.logo} {network?.name}</p>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3 mb-4">
+
+      {/* Network enthusiasm bar */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs text-zinc-500 w-20 flex-shrink-0">Network interest</span>
+        <div className="flex-1 h-1.5 rounded-full bg-zinc-700 overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${score >= 80 ? 'bg-emerald-500' : score >= 65 ? 'bg-amber-500' : score >= 50 ? 'bg-orange-500' : 'bg-rose-500'}`} style={{ width: `${score}%` }} />
+        </div>
+        <span className={`text-xs font-bold tabular-nums w-20 text-right ${scoreBg}`}>{score} — {scoreLabel}</span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-3">
         <div className="bg-zinc-900/60 rounded-lg p-2 text-center">
           <div className="text-xs text-zinc-500">Episodes</div>
           <div className="font-bold text-white">{offer.episodesOffered}</div>
@@ -264,9 +285,7 @@ function RenewalCard({ offer }: { offer: RenewalOffer }) {
         <div className="bg-zinc-900/60 rounded-lg p-2 text-center">
           <div className="text-xs text-zinc-500">Per Episode</div>
           <div className={`font-bold tabular-nums ${isAccepted ? 'text-emerald-300' : 'text-emerald-400'}`}>{formatMoney(offer.payPerEpisode)}</div>
-          {isAccepted && offer.counterPayPerEpisode && (
-            <div className="text-xs text-emerald-500 mt-0.5">↑ counter accepted</div>
-          )}
+          {isAccepted && <div className="text-xs text-emerald-500 mt-0.5">↑ negotiated</div>}
         </div>
         <div className="bg-zinc-900/60 rounded-lg p-2 text-center">
           <div className="text-xs text-zinc-500">Expires</div>
@@ -274,10 +293,35 @@ function RenewalCard({ offer }: { offer: RenewalOffer }) {
         </div>
       </div>
 
+      {/* Special episode options */}
+      {(offer.includeFlashback || offer.includeTwoPartFinale) && (
+        <div className="mb-3 bg-zinc-900/50 rounded-xl p-3 border border-zinc-800 space-y-2">
+          <div className="text-xs font-semibold text-zinc-400 mb-1">✨ Network suggests special episodes:</div>
+          {offer.includeFlashback && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={useFlashback} onChange={e => setUseFlashback(e.target.checked)} className="rounded" />
+              <span className="text-xs text-zinc-300">
+                📼 Flashback episode (Ep {offer.flashbackEpisodeNum})
+                <span className="text-zinc-500 ml-1">+10% ratings · fans +15 · critics −8</span>
+              </span>
+            </label>
+          )}
+          {offer.includeTwoPartFinale && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={useTwoPartFinale} onChange={e => setUseTwoPartFinale(e.target.checked)} className="rounded" />
+              <span className="text-xs text-zinc-300">
+                🎬 Two-part finale (Eps {offer.episodesOffered - 1}–{offer.episodesOffered})
+                <span className="text-zinc-500 ml-1">+22% ratings · critics +12 · fans +10</span>
+              </span>
+            </label>
+          )}
+        </div>
+      )}
+
       {showNegotiate && !isAccepted && (
-        <div className="mb-4 bg-zinc-900/70 rounded-xl p-3 border border-zinc-700">
-          <div className="text-xs font-semibold text-zinc-300 mb-2">⚖️ Counter Offer — Pick your ask:</div>
-          <div className="text-xs text-zinc-500 mb-3">Higher asks earn more but risk losing the deal entirely. Your studio reputation influences success.</div>
+        <div className="mb-3 bg-zinc-900/70 rounded-xl p-3 border border-zinc-700">
+          <div className="text-xs font-semibold text-zinc-300 mb-2">⚖️ Counter Offer — pick your ask:</div>
+          <div className="text-xs text-zinc-500 mb-3">Higher asks earn more but risk losing the deal. Studio reputation influences success.</div>
           <div className="space-y-1.5">
             {negotiateTiers.map(t => (
               <button
@@ -296,7 +340,7 @@ function RenewalCard({ offer }: { offer: RenewalOffer }) {
 
       <div className="flex gap-2">
         <button
-          onClick={() => acceptRenewal(offer.id)}
+          onClick={() => acceptRenewal(offer.id, { includeFlashback: useFlashback, includeTwoPartFinale: useTwoPartFinale })}
           className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl transition-all"
         >
           ✓ Accept & Develop S{offer.proposedSeason}
@@ -306,16 +350,12 @@ function RenewalCard({ offer }: { offer: RenewalOffer }) {
             onClick={() => setShowNegotiate(!showNegotiate)}
             className="px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-sm rounded-xl transition-all"
             title="Negotiate for better terms"
-          >
-            ⚖️
-          </button>
+          >⚖️</button>
         )}
         <button
           onClick={() => declineRenewal(offer.id)}
           className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-semibold text-sm rounded-xl transition-all"
-        >
-          Decline
-        </button>
+        >Decline</button>
       </div>
     </div>
   );
@@ -326,6 +366,8 @@ function AiredShowRow({ show }: { show: AiredShow }) {
   const [showHeatMap, setShowHeatMap] = useState(false);
   const startSpinoff = useGameStore(s => s.startSpinoff);
   const startReboot = useGameStore(s => s.startReboot);
+  const startRevival = useGameStore(s => s.startRevival);
+  const renewalOffers = useGameStore(s => s.studio?.renewalOffers ?? []);
   const network = NETWORKS.find(n => n.id === show.deal.networkId);
   const genre = GENRE_PROFILES[show.draft.genre];
   const genrePopularity = useGameStore(s => s.studio?.genrePopularity ?? {});
@@ -336,6 +378,8 @@ function AiredShowRow({ show }: { show: AiredShow }) {
     renewed: 'text-emerald-400 bg-emerald-900/30 border-emerald-800',
   };
   const profitColor = show.profit >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  const hasActiveRenewal = renewalOffers.some(o => o.showId === show.draft.id || o.productionId === show.id);
+  const isShoppable = (show.status === 'cancelled' || show.status === 'completed') && !hasActiveRenewal;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
@@ -433,6 +477,21 @@ function AiredShowRow({ show }: { show: AiredShow }) {
             </button>
             {showHeatMap && <HeatMapDisplay draft={show.draft} />}
           </div>
+
+          {/* Shop to other networks */}
+          {isShoppable && (
+            <div className="pt-1 border-t border-zinc-800">
+              <div className="text-xs text-zinc-600 mb-2">
+                {show.status === 'cancelled' ? '📡 Cancelled — shop to another network?' : '📡 No renewal yet — explore other networks?'}
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); startRevival(show.id); }}
+                className="w-full py-2 bg-amber-900/30 hover:bg-amber-800/50 border border-amber-700/60 text-amber-300 font-semibold text-xs rounded-xl transition-all"
+              >
+                🏪 Shop to Other Networks
+              </button>
+            </div>
+          )}
 
           {/* Extend universe */}
           <div className="pt-1 border-t border-zinc-800">
