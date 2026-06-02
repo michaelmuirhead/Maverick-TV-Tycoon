@@ -1,6 +1,7 @@
 import {
   Studio, ActiveProduction, GameEvent, RenewalOffer, AiredShow,
   AwardNomination, RivalStudio, RivalShow, Genre, PassiveIncomeStream,
+  DEFAULT_GAME_SETTINGS,
 } from '@/types/game';
 import { NETWORKS } from '@/data/networks';
 import { RIVAL_STUDIOS } from '@/data/rivals';
@@ -10,6 +11,13 @@ import { BUILDING_CONFIG } from '@/data/buildings';
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function rng(): number { return Math.random(); }
+
+// ─── game settings multipliers ───────────────────────────────────────────────
+const VIEWERSHIP_MULTS: Record<string, number> = { meagre: 0.45, modest: 0.70, normal: 1.00, ample: 1.35, abundant: 1.75 };
+const COST_MULTS: Record<string, number> = { bargain: 0.40, cheap: 0.65, affordable: 1.00, expensive: 1.45, lavish: 1.85 };
+const RENEWAL_SCORE_THRESHOLDS: Record<string, number> = { 'nearly-impossible': 66, slim: 54, fair: 42, good: 30, slapping: 20 };
+const AI_QUALITY_MULTS: Record<string, number> = { super: 1.35, high: 1.15, average: 1.00, poor: 0.80, terrible: 0.60 };
+const AI_LAUNCH_RATES: Record<string, number> = { super: 0.16, high: 0.11, average: 0.08, poor: 0.05, terrible: 0.025 };
 
 export interface AwardShowDef {
   id: string;
@@ -460,7 +468,10 @@ function randomTitle(): string {
   return `${a} ${b}`;
 }
 
-function processRivalAI(rivals: RivalStudio[], genrePopularity: Record<string, number>): RivalStudio[] {
+function processRivalAI(rivals: RivalStudio[], genrePopularity: Record<string, number>, aiEfficiency = 'average'): RivalStudio[] {
+  const qualityMult = AI_QUALITY_MULTS[aiEfficiency] ?? 1.0;
+  const launchRate = AI_LAUNCH_RATES[aiEfficiency] ?? 0.08;
+
   return rivals.map(rival => {
     let updated = { ...rival, activeShows: [...rival.activeShows] };
 
@@ -476,8 +487,8 @@ function processRivalAI(rivals: RivalStudio[], genrePopularity: Record<string, n
       return show;
     });
 
-    // Rivals may greenlight a new show (base 8%; hot genres pull rivals in)
-    if (rng() < 0.08 && updated.activeShows.filter(s => s.status === 'airing').length < 4) {
+    // Rivals may greenlight a new show (base rate determined by AI efficiency setting)
+    if (rng() < launchRate && updated.activeShows.filter(s => s.status === 'airing').length < 4) {
       // Weighted genre pick — bias toward high-popularity genres
       const weightedSpecialty = updated.specialty.flatMap(g => {
         const pop = genrePopularity[g] ?? 50;
@@ -486,7 +497,7 @@ function processRivalAI(rivals: RivalStudio[], genrePopularity: Record<string, n
       const genre = weightedSpecialty[Math.floor(rng() * weightedSpecialty.length)];
       const availableNetwork = NETWORKS.find(n => n.preferredGenres.includes(genre));
       if (availableNetwork) {
-        const quality = clamp(Math.round(rival.reputation * 0.7 + rng() * 30), 30, 95);
+        const quality = clamp(Math.round(rival.reputation * 0.7 * qualityMult + rng() * 30), 30, 95);
         const newShow: RivalShow = {
           id: uid(),
           title: randomTitle(),
@@ -653,6 +664,11 @@ export function advanceWeek(studio: Studio): WeekResult {
   const newWeek = studio.week >= 52 ? 1 : studio.week + 1;
   const newYear = studio.week >= 52 ? studio.year + 1 : studio.year;
 
+  const gs = studio.settings ?? DEFAULT_GAME_SETTINGS;
+  const viewMult = VIEWERSHIP_MULTS[gs.viewership] ?? 1.00;
+  const costMult = COST_MULTS[gs.productionCosts] ?? 1.00;
+  const renewalThreshold = RENEWAL_SCORE_THRESHOLDS[gs.pitchingChances] ?? 42;
+
   const newEvents: GameEvent[] = [];
   let money = studio.money;
   let reputation = studio.reputation;
@@ -661,7 +677,7 @@ export function advanceWeek(studio: Studio): WeekResult {
   const buildingMaintenance = (studio.buildings ?? []).reduce(
     (sum, b) => sum + BUILDING_CONFIG[b.type][b.tier].weeklyMaintenance, 0
   );
-  money -= buildingMaintenance;
+  if (!gs.unlimitedMoney) money -= buildingMaintenance;
   let awardsSeasonYear = studio.awardsSeasonYear;
   let passiveIncomeStreams = [...(studio.passiveIncomeStreams ?? [])];
   let developmentRoster = [...(studio.developmentRoster ?? [])];
@@ -700,11 +716,11 @@ export function advanceWeek(studio: Studio): WeekResult {
         const epNum = i + 1;
         const isFlashback = !!(prod.includeFlashback && prod.flashbackEpisodeNum === epNum);
         const isTwoPartFinale = !!(prod.includeTwoPartFinale && epNum > prod.totalEpisodes - 2);
-        const baseR = Math.round(calcEpisodeRating(boostedProd, i) * popularityMult * 10) / 10;
+        const baseR = Math.round(calcEpisodeRating(boostedProd, i) * popularityMult * viewMult * 10) / 10;
         const epRating = Math.round(baseR * (isFlashback ? 1.10 : isTwoPartFinale ? 1.22 : 1.0) * 10) / 10;
         const criticScore = clamp(calcEpisodeCriticScore(boostedProd, epNum) + (isFlashback ? -8 : 0) + (isTwoPartFinale ? 12 : 0), 0, 100);
         const audienceScore = clamp(calcEpisodeAudienceScore(boostedProd, epNum, studio.genrePopularity ?? {}) + (isFlashback ? 15 : 0) + (isTwoPartFinale ? 10 : 0), 0, 100);
-        money -= calcEpisodeCost(prod.draft);
+        if (!gs.unlimitedMoney) money -= Math.round(calcEpisodeCost(prod.draft) * costMult);
         money += prod.deal.payPerEpisode;
         updatedResults.push({ episode: epNum, rating: epRating, criticScore, audienceScore });
       }
@@ -726,14 +742,14 @@ export function advanceWeek(studio: Studio): WeekResult {
     const epNum = prod.currentEpisode + 1;
     const isFlashback = !!(prod.includeFlashback && prod.flashbackEpisodeNum === epNum);
     const isTwoPartFinale = !!(prod.includeTwoPartFinale && epNum > prod.totalEpisodes - 2);
-    const baseRating = Math.round(calcEpisodeRating(prod, epNum) * popularityMult * 10) / 10;
+    const baseRating = Math.round(calcEpisodeRating(prod, epNum) * popularityMult * viewMult * 10) / 10;
     const epRating = Math.round(baseRating * (isFlashback ? 1.10 : isTwoPartFinale ? 1.22 : 1.0) * 10) / 10;
     const criticScore = clamp(calcEpisodeCriticScore(prod, epNum) + (isFlashback ? -8 : 0) + (isTwoPartFinale ? 12 : 0), 0, 100);
     const audienceScore = clamp(calcEpisodeAudienceScore(prod, epNum, studio.genrePopularity ?? {}) + (isFlashback ? 15 : 0) + (isTwoPartFinale ? 10 : 0), 0, 100);
     const epResult = { episode: epNum, rating: epRating, criticScore, audienceScore };
 
-    const epCost = calcEpisodeCost(prod.draft);
-    money -= epCost;
+    const epCost = Math.round(calcEpisodeCost(prod.draft) * costMult);
+    if (!gs.unlimitedMoney) money -= epCost;
     money += prod.deal.payPerEpisode;
 
     const event = maybeGenerateEvent(prod, epNum, epRating, newWeek, newYear);
@@ -772,7 +788,7 @@ export function advanceWeek(studio: Studio): WeekResult {
     const network = NETWORKS.find(n => n.id === prod.deal.networkId);
 
     const renewalScore = network ? calcNetworkRenewalScore(avgRating, network, prod) : 0;
-    if (network && shouldRenew(renewalScore)) {
+    if (network && renewalScore >= renewalThreshold) {
       const offer = generateRenewalOffer(prod, avgRating, newWeek, newYear, renewalScore);
       renewalOffers.push(offer);
       newEvents.push({
@@ -865,7 +881,7 @@ export function advanceWeek(studio: Studio): WeekResult {
 
   // ── development roster ────────────────────────────────────────────────────
   developmentRoster = developmentRoster.map(actor => {
-    money -= 3000;
+    if (!gs.unlimitedMoney) money -= 3000;
     const updated = { ...actor, developmentWeeks: (actor.developmentWeeks ?? 0) + 1 };
     if (updated.starLevel < 3 && rng() < 0.04) {
       const newLevel = (updated.starLevel + 1) as 1 | 2 | 3 | 4 | 5;
@@ -981,7 +997,7 @@ export function advanceWeek(studio: Studio): WeekResult {
   }
 
   // ── rival AI ─────────────────────────────────────────────────────────────
-  const rivalStudios = processRivalAI(studio.rivalStudios, studio.genrePopularity ?? {});
+  const rivalStudios = processRivalAI(studio.rivalStudios, studio.genrePopularity ?? {}, gs.aiEfficiency);
 
   // ── genre popularity ─────────────────────────────────────────────────────
   const genrePopularity = updateGenrePopularity(
@@ -1032,11 +1048,25 @@ export function advanceWeek(studio: Studio): WeekResult {
     }
   }
 
+  // Bankruptcy check
+  if (!gs.unlimitedMoney && gs.bankruptcyThreshold > 0 && money < gs.bankruptcyThreshold) {
+    const alreadyWarned = newEvents.some(e => e.type === 'financial' && e.headline.includes('Bankruptcy'));
+    if (!alreadyWarned && !studio.events.slice(0, 5).some(e => e.headline.includes('Bankruptcy'))) {
+      newEvents.unshift({
+        id: uid(), type: 'financial', week: newWeek, year: newYear,
+        headline: `⚠️ Bankruptcy Warning — Funds below ${formatMoney(gs.bankruptcyThreshold)}`,
+        description: `Your studio has fallen below the bankruptcy threshold of ${formatMoney(gs.bankruptcyThreshold)}. Secure new deals immediately.`,
+        impact: { reputation: -5 }, isRead: false,
+      });
+      reputation -= 5;
+    }
+  }
+
   const updatedStudio: Studio = {
     ...studio,
     week: newWeek,
     year: newYear,
-    money: Math.round(money),
+    money: gs.unlimitedMoney ? studio.money : Math.round(money),
     reputation: clamp(Math.round(reputation), 0, 100),
     totalShows: studio.totalShows + newAiredShows.length,
     awardsWon: studio.awardsWon + awardNominations.filter(n => n.year === newYear && n.isWinner).length,

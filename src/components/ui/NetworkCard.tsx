@@ -11,6 +11,7 @@ interface NetworkCardProps {
   onPitch: () => void;
   pitchDisabled?: boolean;
   reachModifier?: number;
+  pitchBonus?: number;
 }
 
 const TYPE_BADGE: Record<string, string> = {
@@ -27,8 +28,9 @@ const TYPE_LABEL: Record<string, string> = {
   streaming: 'Streaming',
 };
 
-export default function NetworkCard({ network, quality, networkFit, offer, onPitch, pitchDisabled, reachModifier = 0 }: NetworkCardProps) {
-  const canPitch = quality >= network.minQuality && !pitchDisabled;
+export default function NetworkCard({ network, quality, networkFit, offer, onPitch, pitchDisabled, reachModifier = 0, pitchBonus = 0 }: NetworkCardProps) {
+  const effectiveQuality = quality + pitchBonus;
+  const canPitch = effectiveQuality >= network.minQuality && !pitchDisabled;
   const fitColor = networkFit >= 75 ? 'text-emerald-400' : networkFit >= 50 ? 'text-amber-400' : 'text-rose-400';
 
   return (
@@ -81,7 +83,7 @@ export default function NetworkCard({ network, quality, networkFit, offer, onPit
             : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
         }`}
       >
-        {pitchDisabled ? 'No Studio Capacity' : canPitch ? 'Pitch This Show' : `Quality too low (need ${network.minQuality})`}
+        {pitchDisabled ? 'No Studio Capacity' : canPitch ? 'Pitch This Show' : `Quality too low (need ${network.minQuality}${pitchBonus !== 0 ? `, effective ${effectiveQuality}` : ''})`}
       </button>
     </div>
   );
