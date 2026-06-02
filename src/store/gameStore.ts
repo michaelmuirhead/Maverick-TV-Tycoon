@@ -10,7 +10,7 @@ import {
   getBuildingQualityBonuses, getBuildingCapacity,
   calcParentBoost, calcRevivalBoost,
 } from '@/lib/gameLogic';
-import { advanceWeek as simulateWeek, calcBaseRating } from '@/lib/weekSimulation';
+import { advanceWeek as simulateWeek, calcBaseRating, getEffectiveReach } from '@/lib/weekSimulation';
 import { NETWORKS } from '@/data/networks';
 import { RIVAL_STUDIOS } from '@/data/rivals';
 import { GENRE_PROFILES } from '@/data/genres';
@@ -79,6 +79,8 @@ export const useGameStore = create<GameState>()(
             events: [],
             rivalStudios: RIVAL_STUDIOS,
             awardsSeasonYear: 0,
+            processedAwardCeremonies: {},
+            networkReachModifiers: {},
             networkSlots: {},
             genrePopularity: initialPopularity,
             buildings: [...DEFAULT_BUILDINGS],
@@ -137,7 +139,7 @@ export const useGameStore = create<GameState>()(
 
         const parentBoost = calcParentBoost(draft, studio.airedShows);
         const revivalBoost = calcRevivalBoost(draft, studio.airedShows);
-        const baseRating = calcBaseRating(quality, networkFit, network.reach) * (1 + parentBoost + revivalBoost);
+        const baseRating = calcBaseRating(quality, networkFit, getEffectiveReach(networkId, network.reach, studio.networkReachModifiers ?? {})) * (1 + parentBoost + revivalBoost);
 
         const production: ActiveProduction = {
           id: draft.id,

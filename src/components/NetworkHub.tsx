@@ -53,6 +53,7 @@ export default function NetworkHub() {
   const hasCapacity = studio.buildings === undefined || (rsCapacity > activeCount && esCapacity > activeCount);
 
   const airedShows = studio.airedShows;
+  const networkReachModifiers = studio.networkReachModifiers ?? {};
   const revivalBoost = draft.isRevival ? calcRevivalBoost(draft, airedShows) : 0;
 
   const filtered = (filter === 'all' ? NETWORKS : NETWORKS.filter((n) => n.type === filter))
@@ -189,6 +190,7 @@ export default function NetworkHub() {
                   offer={offer}
                   onPitch={() => handlePitch(network.id)}
                   pitchDisabled={!hasCapacity}
+                  reachModifier={networkReachModifiers[network.id] ?? 0}
                 />
                 {isPlayerChoice && (
                   <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1">

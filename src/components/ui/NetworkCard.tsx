@@ -10,6 +10,7 @@ interface NetworkCardProps {
   offer: number;
   onPitch: () => void;
   pitchDisabled?: boolean;
+  reachModifier?: number;
 }
 
 const TYPE_BADGE: Record<string, string> = {
@@ -26,7 +27,7 @@ const TYPE_LABEL: Record<string, string> = {
   streaming: 'Streaming',
 };
 
-export default function NetworkCard({ network, quality, networkFit, offer, onPitch, pitchDisabled }: NetworkCardProps) {
+export default function NetworkCard({ network, quality, networkFit, offer, onPitch, pitchDisabled, reachModifier = 0 }: NetworkCardProps) {
   const canPitch = quality >= network.minQuality && !pitchDisabled;
   const fitColor = networkFit >= 75 ? 'text-emerald-400' : networkFit >= 50 ? 'text-amber-400' : 'text-rose-400';
 
@@ -50,7 +51,12 @@ export default function NetworkCard({ network, quality, networkFit, offer, onPit
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
           <div className="text-xs text-zinc-500 mb-0.5">Reach</div>
-          <div className="text-sm font-bold text-blue-400">{Math.round(network.reach * 100)}%</div>
+          <div className="text-sm font-bold text-blue-400">{Math.round(Math.min(1.0, Math.max(0.1, network.reach + reachModifier)) * 100)}%</div>
+          {Math.abs(reachModifier) >= 0.01 && (
+            <div className={`text-xs font-semibold ${reachModifier > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {reachModifier > 0 ? '📈' : '📉'} {reachModifier > 0 ? '+' : ''}{Math.round(reachModifier * 100)}%
+            </div>
+          )}
         </div>
         <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
           <div className="text-xs text-zinc-500 mb-0.5">Fit Score</div>
