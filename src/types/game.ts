@@ -142,6 +142,8 @@ export interface NetworkDeal {
 export interface EpisodeResult {
   episode: number;
   rating: number;
+  criticScore?: number;
+  audienceScore?: number;
   eventId?: string;
 }
 
@@ -186,6 +188,8 @@ export interface AiredShow {
   quality: number;
   ratings: number[];
   avgRating: number;
+  avgCriticScore?: number;
+  avgAudienceScore?: number;
   revenue: number;
   cost: number;
   profit: number;

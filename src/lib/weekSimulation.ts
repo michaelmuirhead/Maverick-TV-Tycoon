@@ -10,6 +10,48 @@ import { BUILDING_CONFIG } from '@/data/buildings';
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function rng(): number { return Math.random(); }
+
+// ─── critic & audience score helpers ────────────────────────────────────────
+
+// How much critics value each genre by default (prestige bias)
+const CRITIC_PRESTIGE: Partial<Record<Genre, number>> = {
+  documentary: 12, 'limited-series': 10, anthology: 9,
+  drama: 5, crime: 4, 'sci-fi': 3, horror: 3, fantasy: 1,
+  comedy: 0, action: -3, procedural: -2,
+  'talk-show': -8, 'late-night': -10, 'soap-opera': -20, reality: -22,
+};
+
+// Entertainment pull per genre for audience scores
+const AUDIENCE_ENTERTAIN: Partial<Record<Genre, number>> = {
+  comedy: 10, action: 9, reality: 8, 'soap-opera': 7, horror: 7,
+  'talk-show': 5, 'late-night': 5, crime: 6, fantasy: 6,
+  drama: 4, 'sci-fi': 4, procedural: 3,
+  'limited-series': 2, anthology: 1, documentary: -4,
+};
+
+function calcEpisodeCriticScore(prod: ActiveProduction, epNum: number): number {
+  const { draft, quality } = prod;
+  const prestige  = CRITIC_PRESTIGE[draft.genre] ?? 0;
+  const narrative = ((draft.storytelling.narrativeDensity - 5) / 5) * 8;
+  const writer    = draft.writer ? (draft.writer.level - 1) * 2 : 0;
+  const position  = epNum === 1 ? 3 : epNum === prod.totalEpisodes ? 8 : 0;
+  const base      = quality * 0.62 + prestige + narrative + writer + position;
+  const variance  = (rng() - 0.5) * 22;
+  return clamp(Math.round(base + variance), 0, 100);
+}
+
+function calcEpisodeAudienceScore(
+  prod: ActiveProduction, epNum: number, genrePopularity: Record<string, number>
+): number {
+  const { draft, quality, networkFit } = prod;
+  const entertain  = AUDIENCE_ENTERTAIN[draft.genre] ?? 0;
+  const popularity = ((genrePopularity[draft.genre] ?? 50) - 50) / 50 * 8;
+  const fit        = (networkFit / 100) * 10;
+  const finale     = epNum === prod.totalEpisodes ? 5 : 0;
+  const base       = quality * 0.46 + entertain + popularity + fit + finale;
+  const variance   = (rng() - 0.5) * 14;
+  return clamp(Math.round(base + variance), 0, 100);
+}
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 function uid(): string { return Math.random().toString(36).slice(2, 10); }
 
@@ -176,11 +218,18 @@ function generateRenewalOffer(
 
 // ─── production → aired show ─────────────────────────────────────────────────
 
+function avg(nums: number[]): number | undefined {
+  if (!nums.length) return undefined;
+  return Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
+}
+
 function productionToAiredShow(prod: ActiveProduction): AiredShow {
   const ratings = prod.episodeResults.map(e => e.rating);
   const avgRating = ratings.length
     ? Math.round((ratings.reduce((s, r) => s + r, 0) / ratings.length) * 10) / 10
     : 0;
+  const criticScores  = prod.episodeResults.map(e => e.criticScore).filter((s): s is number => s !== undefined);
+  const audienceScores = prod.episodeResults.map(e => e.audienceScore).filter((s): s is number => s !== undefined);
   const revenue = prod.deal.payPerEpisode * prod.totalEpisodes;
   const cost = calcEpisodeCost(prod.draft) * prod.totalEpisodes;
   return {
@@ -190,6 +239,8 @@ function productionToAiredShow(prod: ActiveProduction): AiredShow {
     quality: prod.quality,
     ratings,
     avgRating,
+    avgCriticScore: avg(criticScores),
+    avgAudienceScore: avg(audienceScores),
     revenue,
     cost,
     profit: revenue - cost,
@@ -441,9 +492,11 @@ export function advanceWeek(studio: Studio): WeekResult {
 
       for (let i = prod.currentEpisode; i < prod.totalEpisodes; i++) {
         const epRating = Math.round(calcEpisodeRating(boostedProd, i) * popularityMult * 10) / 10;
+        const criticScore   = calcEpisodeCriticScore(boostedProd, i + 1);
+        const audienceScore = calcEpisodeAudienceScore(boostedProd, i + 1, studio.genrePopularity ?? {});
         money -= calcEpisodeCost(prod.draft);
         money += prod.deal.payPerEpisode;
-        updatedResults.push({ episode: i + 1, rating: epRating });
+        updatedResults.push({ episode: i + 1, rating: epRating, criticScore, audienceScore });
       }
 
       const dropRating = updatedResults.at(-1)?.rating ?? prod.baseRating;
@@ -462,7 +515,9 @@ export function advanceWeek(studio: Studio): WeekResult {
     const popularityMult = 0.6 + (genrePop / 100) * 0.9;
     const epNum = prod.currentEpisode + 1;
     const epRating = Math.round(calcEpisodeRating(prod, epNum) * popularityMult * 10) / 10;
-    const epResult = { episode: epNum, rating: epRating };
+    const criticScore   = calcEpisodeCriticScore(prod, epNum);
+    const audienceScore = calcEpisodeAudienceScore(prod, epNum, studio.genrePopularity ?? {});
+    const epResult = { episode: epNum, rating: epRating, criticScore, audienceScore };
 
     const epCost = calcEpisodeCost(prod.draft);
     money -= epCost;

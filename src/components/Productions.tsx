@@ -7,6 +7,22 @@ import QualityMeter from '@/components/ui/QualityMeter';
 import { GENRE_PROFILES } from '@/data/genres';
 import { NETWORKS } from '@/data/networks';
 
+function scoreColor(s: number): string {
+  if (s >= 80) return 'text-emerald-400';
+  if (s >= 65) return 'text-amber-400';
+  if (s >= 50) return 'text-orange-400';
+  return 'text-rose-500';
+}
+
+function ScorePill({ icon, label, score }: { icon: string; label: string; score: number }) {
+  return (
+    <div className="flex flex-col items-center">
+      <div className="text-xs text-zinc-600 mb-0.5">{icon} {label}</div>
+      <div className={`text-sm font-bold tabular-nums ${scoreColor(score)}`}>{score}<span className="text-xs font-normal text-zinc-600">/100</span></div>
+    </div>
+  );
+}
+
 function RatingsChart({ ratings, baseRating }: { ratings: number[]; baseRating?: number }) {
   const max = Math.max(...ratings, 1, baseRating ?? 0);
   return (
@@ -28,6 +44,14 @@ function ActiveProductionCard({ prod }: { prod: ActiveProduction }) {
     ? prod.episodeResults.reduce((s, e) => s + e.rating, 0) / prod.episodeResults.length
     : null;
   const latestRating = prod.episodeResults.at(-1)?.rating;
+
+  const episodesWithScores = prod.episodeResults.filter(e => e.criticScore !== undefined);
+  const runningCritic = episodesWithScores.length
+    ? Math.round(episodesWithScores.reduce((s, e) => s + (e.criticScore ?? 0), 0) / episodesWithScores.length)
+    : null;
+  const runningAudience = episodesWithScores.length
+    ? Math.round(episodesWithScores.reduce((s, e) => s + (e.audienceScore ?? 0), 0) / episodesWithScores.length)
+    : null;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
@@ -76,7 +100,7 @@ function ActiveProductionCard({ prod }: { prod: ActiveProduction }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-800">
+      <div className="grid grid-cols-5 gap-2 pt-2 border-t border-zinc-800">
         <div className="text-center">
           <div className="text-xs text-zinc-600">Quality</div>
           <div className="text-sm font-bold text-amber-400">{prod.quality}</div>
@@ -88,6 +112,18 @@ function ActiveProductionCard({ prod }: { prod: ActiveProduction }) {
         <div className="text-center">
           <div className="text-xs text-zinc-600">Per Episode</div>
           <div className="text-sm font-bold text-emerald-400 tabular-nums">{formatMoney(prod.deal.payPerEpisode)}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-xs text-zinc-600">🎬 Critics</div>
+          <div className={`text-sm font-bold tabular-nums ${runningCritic !== null ? scoreColor(runningCritic) : 'text-zinc-600'}`}>
+            {runningCritic !== null ? `${runningCritic}` : '—'}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-xs text-zinc-600">🍿 Audience</div>
+          <div className={`text-sm font-bold tabular-nums ${runningAudience !== null ? scoreColor(runningAudience) : 'text-zinc-600'}`}>
+            {runningAudience !== null ? `${runningAudience}` : '—'}
+          </div>
         </div>
       </div>
     </div>
@@ -163,6 +199,12 @@ function AiredShowRow({ show }: { show: AiredShow }) {
                 <div className="text-xs text-zinc-500">{genre.emoji} {genre.label} · S{show.seasonNumber} · {network?.logo} {network?.name} · {show.ratings.length} eps</div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                {show.avgCriticScore !== undefined && (
+                  <span className={`text-xs font-bold tabular-nums ${scoreColor(show.avgCriticScore)}`} title="Critic Score">🎬{show.avgCriticScore}</span>
+                )}
+                {show.avgAudienceScore !== undefined && (
+                  <span className={`text-xs font-bold tabular-nums ${scoreColor(show.avgAudienceScore)}`} title="Audience Score">🍿{show.avgAudienceScore}</span>
+                )}
                 <div className={`text-sm font-bold tabular-nums ${profitColor}`}>{show.profit >= 0 ? '+' : ''}{formatMoney(show.profit)}</div>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border capitalize ${statusColors[show.status]}`}>{show.status}</span>
               </div>
@@ -176,6 +218,30 @@ function AiredShowRow({ show }: { show: AiredShow }) {
 
       {expanded && (
         <div className="border-t border-zinc-800 p-4 space-y-3 bg-zinc-900/50">
+          {/* Review scores */}
+          {(show.avgCriticScore !== undefined || show.avgAudienceScore !== undefined) && (
+            <div className="flex gap-3">
+              {show.avgCriticScore !== undefined && (
+                <div className={`flex-1 bg-zinc-800 rounded-xl p-3 text-center border ${show.avgCriticScore >= 80 ? 'border-emerald-800/50' : show.avgCriticScore >= 65 ? 'border-amber-800/50' : 'border-rose-900/50'}`}>
+                  <div className="text-xs text-zinc-500 mb-1">🎬 Critic Score</div>
+                  <div className={`text-2xl font-black tabular-nums ${scoreColor(show.avgCriticScore)}`}>{show.avgCriticScore}<span className="text-sm font-normal text-zinc-600">/100</span></div>
+                  <div className={`text-xs mt-0.5 ${scoreColor(show.avgCriticScore)}`}>
+                    {show.avgCriticScore >= 90 ? 'Universal Acclaim' : show.avgCriticScore >= 80 ? 'Critical Darling' : show.avgCriticScore >= 65 ? 'Generally Favorable' : show.avgCriticScore >= 50 ? 'Mixed Reviews' : 'Generally Unfavorable'}
+                  </div>
+                </div>
+              )}
+              {show.avgAudienceScore !== undefined && (
+                <div className={`flex-1 bg-zinc-800 rounded-xl p-3 text-center border ${show.avgAudienceScore >= 80 ? 'border-emerald-800/50' : show.avgAudienceScore >= 65 ? 'border-amber-800/50' : 'border-rose-900/50'}`}>
+                  <div className="text-xs text-zinc-500 mb-1">🍿 Audience Score</div>
+                  <div className={`text-2xl font-black tabular-nums ${scoreColor(show.avgAudienceScore)}`}>{show.avgAudienceScore}<span className="text-sm font-normal text-zinc-600">/100</span></div>
+                  <div className={`text-xs mt-0.5 ${scoreColor(show.avgAudienceScore)}`}>
+                    {show.avgAudienceScore >= 90 ? 'Fan Favourite' : show.avgAudienceScore >= 80 ? 'Crowd Pleaser' : show.avgAudienceScore >= 65 ? 'Well Received' : show.avgAudienceScore >= 50 ? 'Divisive' : 'Audience Backlash'}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
             {[
               { label: 'Avg Rating', val: `${show.avgRating}M` },
