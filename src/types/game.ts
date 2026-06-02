@@ -284,6 +284,7 @@ export interface Network {
 
 export interface Studio {
   name: string;
+  playerName?: string;
   specialty: Genre;
   money: number;
   reputation: number;

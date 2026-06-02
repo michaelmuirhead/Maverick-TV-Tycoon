@@ -15,7 +15,6 @@ export default function Dashboard() {
   if (!studio) return null;
 
   const buildings = studio.buildings ?? [];
-  const genre = GENRE_PROFILES[studio.specialty];
   const profitColor = studio.money >= 5_000_000 ? 'text-emerald-400' : studio.money >= 0 ? 'text-amber-400' : 'text-rose-400';
   const unreadCount = studio.events.filter(e => !e.isRead).length;
   const renewalCount = studio.renewalOffers.length;
@@ -39,7 +38,7 @@ export default function Dashboard() {
             <div className="min-w-0">
               <h1 className="font-black text-base md:text-lg text-white truncate">{studio.name}</h1>
               <p className="text-xs text-zinc-500 truncate">
-                {genre.emoji} {genre.label} · Yr {studio.year} W{studio.week}
+                {studio.playerName ? `${studio.playerName} · ` : ''}Yr {studio.year} · W{studio.week}
               </p>
             </div>
           </div>

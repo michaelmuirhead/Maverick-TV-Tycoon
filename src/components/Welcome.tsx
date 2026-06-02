@@ -1,18 +1,17 @@
 'use client';
 import React, { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
-import { Genre } from '@/types/game';
-import { GENRES } from '@/data/genres';
 
 export default function Welcome() {
   const startGame = useGameStore((s) => s.startGame);
-  const [name, setName] = useState('');
-  const [specialty, setSpecialty] = useState<Genre>('drama');
+  const [playerName, setPlayerName] = useState('');
+  const [studioName, setStudioName] = useState('');
   const [error, setError] = useState('');
 
   const handleStart = () => {
-    if (!name.trim()) { setError('Give your studio a name.'); return; }
-    startGame(name.trim(), specialty);
+    if (!playerName.trim()) { setError('Enter your name to get started.'); return; }
+    if (!studioName.trim()) { setError('Give your studio a name.'); return; }
+    startGame(studioName.trim(), 'drama', playerName.trim());
   };
 
   return (
@@ -28,43 +27,33 @@ export default function Welcome() {
       </div>
 
       <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-5 sm:p-8 space-y-6 sm:space-y-8">
+        {/* Player Name */}
+        <div>
+          <label className="block text-sm font-semibold text-zinc-300 mb-2">Your Name</label>
+          <input
+            type="text"
+            value={playerName}
+            onChange={(e) => { setPlayerName(e.target.value); setError(''); }}
+            onKeyDown={(e) => e.key === 'Enter' && handleStart()}
+            placeholder="e.g. Alex Morgan"
+            maxLength={40}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-base focus:outline-none focus:border-amber-500 transition-colors"
+          />
+        </div>
+
         {/* Studio Name */}
         <div>
           <label className="block text-sm font-semibold text-zinc-300 mb-2">Studio Name</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => { setName(e.target.value); setError(''); }}
+            value={studioName}
+            onChange={(e) => { setStudioName(e.target.value); setError(''); }}
             onKeyDown={(e) => e.key === 'Enter' && handleStart()}
             placeholder="e.g. Maverick Pictures"
             maxLength={40}
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-base focus:outline-none focus:border-amber-500 transition-colors"
           />
           {error && <p className="text-rose-400 text-sm mt-1.5">{error}</p>}
-        </div>
-
-        {/* Specialty */}
-        <div>
-          <label className="block text-sm font-semibold text-zinc-300 mb-3">Studio Specialty</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {GENRES.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => setSpecialty(g.id)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150 text-left ${
-                  specialty === g.id
-                    ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                    : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
-                }`}
-              >
-                <span className="text-lg flex-shrink-0">{g.emoji}</span>
-                <span className="truncate">{g.label}</span>
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-zinc-600 mt-2">
-            {GENRES.find((g) => g.id === specialty)?.description}
-          </p>
         </div>
 
         {/* Starting Info */}
@@ -83,3 +72,4 @@ export default function Welcome() {
     </div>
   );
 }
+
