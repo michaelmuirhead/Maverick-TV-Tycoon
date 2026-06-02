@@ -503,7 +503,7 @@ function processRivalAI(rivals: RivalStudio[], genrePopularity: Record<string, n
     }
 
     // Rivals' reputation drifts slowly toward 50
-    updated.reputation = clamp(rival.reputation + (rng() - 0.52) * 2, 20, 95);
+    updated.reputation = Math.round(clamp(rival.reputation + (rng() - 0.52) * 2, 20, 95));
 
     return updated;
   });
