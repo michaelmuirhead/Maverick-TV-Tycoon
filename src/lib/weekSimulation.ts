@@ -199,6 +199,59 @@ function productionToAiredShow(prod: ActiveProduction): AiredShow {
   };
 }
 
+// ─── genre popularity ────────────────────────────────────────────────────────
+
+function updateGenrePopularity(
+  current: Record<string, number>,
+  activeProductions: ActiveProduction[],
+  rivalStudios: RivalStudio[],
+): Record<string, number> {
+  // Tally airing shows and quality per genre (player + rivals)
+  const genreCount: Record<string, number> = {};
+  const genreQuality: Record<string, number[]> = {};
+
+  for (const prod of activeProductions) {
+    if (prod.status === 'airing') {
+      const g = prod.draft.genre;
+      genreCount[g] = (genreCount[g] ?? 0) + 1;
+      (genreQuality[g] = genreQuality[g] ?? []).push(prod.quality);
+    }
+  }
+  for (const rival of rivalStudios) {
+    for (const show of rival.activeShows) {
+      if (show.status === 'airing') {
+        genreCount[show.genre] = (genreCount[show.genre] ?? 0) + 1;
+        (genreQuality[show.genre] = genreQuality[show.genre] ?? []).push(show.quality);
+      }
+    }
+  }
+
+  const updated: Record<string, number> = {};
+  for (const genre of Object.keys(current)) {
+    let pop = current[genre] ?? 50;
+
+    // 1. Random market drift
+    pop += (rng() - 0.5) * 8;
+
+    // 2. Quality influence — great shows elevate the genre; mediocre ones drag it
+    const qualities = genreQuality[genre];
+    if (qualities && qualities.length > 0) {
+      const avgQ = qualities.reduce((s, q) => s + q, 0) / qualities.length;
+      pop += (avgQ - 58) * 0.12;
+    }
+
+    // 3. Saturation penalty — beyond 3 simultaneous shows, audience fatigues
+    const count = genreCount[genre] ?? 0;
+    if (count > 3) pop -= (count - 3) * 3;
+
+    // 4. Gentle mean-reversion so no genre stays pegged at 0 or 100 forever
+    pop += (50 - pop) * 0.04;
+
+    updated[genre] = clamp(Math.round(pop), 5, 100);
+  }
+  return updated;
+}
+
 // ─── rival AI ────────────────────────────────────────────────────────────────
 
 const SHOW_TITLE_WORDS = [
@@ -212,7 +265,7 @@ function randomTitle(): string {
   return `${a} ${b}`;
 }
 
-function processRivalAI(rivals: RivalStudio[]): RivalStudio[] {
+function processRivalAI(rivals: RivalStudio[], genrePopularity: Record<string, number>): RivalStudio[] {
   return rivals.map(rival => {
     let updated = { ...rival, activeShows: [...rival.activeShows] };
 
@@ -228,9 +281,14 @@ function processRivalAI(rivals: RivalStudio[]): RivalStudio[] {
       return show;
     });
 
-    // Rivals may greenlight a new show (8% chance per week)
+    // Rivals may greenlight a new show (base 8%; hot genres pull rivals in)
     if (rng() < 0.08 && updated.activeShows.filter(s => s.status === 'airing').length < 4) {
-      const genre = updated.specialty[Math.floor(rng() * updated.specialty.length)];
+      // Weighted genre pick — bias toward high-popularity genres
+      const weightedSpecialty = updated.specialty.flatMap(g => {
+        const pop = genrePopularity[g] ?? 50;
+        return pop >= 70 ? [g, g] : [g]; // hot genres appear twice → higher pick chance
+      });
+      const genre = weightedSpecialty[Math.floor(rng() * weightedSpecialty.length)];
       const availableNetwork = NETWORKS.find(n => n.preferredGenres.includes(genre));
       if (availableNetwork) {
         const quality = clamp(Math.round(rival.reputation * 0.7 + rng() * 30), 30, 95);
@@ -369,11 +427,13 @@ export function advanceWeek(studio: Studio): WeekResult {
     // Binge drop: air all remaining episodes at once with a premiere-buzz boost
     if (prod.deal.releaseStrategy === 'all-at-once') {
       const buzzBoost = 1.10;
+      const genrePop = studio.genrePopularity?.[prod.draft.genre] ?? 50;
+      const popularityMult = 0.6 + (genrePop / 100) * 0.9;
       const updatedResults = [...prod.episodeResults];
       const boostedProd = { ...prod, baseRating: prod.baseRating * buzzBoost };
 
       for (let i = prod.currentEpisode; i < prod.totalEpisodes; i++) {
-        const epRating = calcEpisodeRating(boostedProd, i);
+        const epRating = Math.round(calcEpisodeRating(boostedProd, i) * popularityMult * 10) / 10;
         money -= calcEpisodeCost(prod.draft);
         money += prod.deal.payPerEpisode;
         updatedResults.push({ episode: i + 1, rating: epRating });
@@ -391,8 +451,10 @@ export function advanceWeek(studio: Studio): WeekResult {
     }
 
     // Weekly release: one episode per advance-week
+    const genrePop = studio.genrePopularity?.[prod.draft.genre] ?? 50;
+    const popularityMult = 0.6 + (genrePop / 100) * 0.9;
     const epNum = prod.currentEpisode + 1;
-    const epRating = calcEpisodeRating(prod, epNum);
+    const epRating = Math.round(calcEpisodeRating(prod, epNum) * popularityMult * 10) / 10;
     const epResult = { episode: epNum, rating: epRating };
 
     const epCost = calcEpisodeCost(prod.draft);
@@ -529,7 +591,38 @@ export function advanceWeek(studio: Studio): WeekResult {
   }
 
   // ── rival AI ─────────────────────────────────────────────────────────────
-  const rivalStudios = processRivalAI(studio.rivalStudios);
+  const rivalStudios = processRivalAI(studio.rivalStudios, studio.genrePopularity ?? {});
+
+  // ── genre popularity ─────────────────────────────────────────────────────
+  const genrePopularity = updateGenrePopularity(
+    studio.genrePopularity ?? {},
+    activeProductions,
+    rivalStudios,
+  );
+
+  // Genre trend events (hot / cold genre notifications)
+  if (rng() < 0.15) {
+    const entries = Object.entries(genrePopularity);
+    const hot = entries.filter(([, v]) => v >= 80);
+    const cold = entries.filter(([, v]) => v <= 25);
+    const target = rng() < 0.5 ? hot[Math.floor(rng() * hot.length)] : cold[Math.floor(rng() * cold.length)];
+    if (target) {
+      const [genreName, pop] = target;
+      const isHot = pop >= 80;
+      newEvents.push({
+        id: uid(),
+        type: 'rival-news',
+        week: newWeek,
+        year: newYear,
+        headline: isHot ? `${genreName} is dominating the market` : `${genreName} audience is shrinking`,
+        description: isHot
+          ? `Audiences can't get enough ${genreName}. Shows in this genre are pulling big numbers.`
+          : `${genreName} content is oversaturated. Viewers are tuning out.`,
+        impact: {},
+        isRead: false,
+      });
+    }
+  }
 
   // ── rival news event (occasional) ────────────────────────────────────────
   if (rng() < 0.1) {
@@ -564,7 +657,8 @@ export function advanceWeek(studio: Studio): WeekResult {
     events: [...newEvents, ...studio.events].slice(0, 80),
     rivalStudios,
     awardsSeasonYear,
-    networkSlots: {}, // recalculate
+    networkSlots: {},
+    genrePopularity,
   };
 
   return { studio: updatedStudio, newEvents };

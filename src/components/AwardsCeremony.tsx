@@ -80,7 +80,7 @@ export default function AwardsCeremony() {
             return (
               <div key={year} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-lg font-bold text-white">{year} Awards</h2>
+                  <h2 className="text-lg font-bold text-white">Year {year} Awards</h2>
                   <div className="flex gap-3">
                     <span className="text-sm text-blue-400">{noms.length} nominated</span>
                     {wins.length > 0 && <span className="text-sm text-amber-400 font-bold">🏆 {wins.length} won</span>}

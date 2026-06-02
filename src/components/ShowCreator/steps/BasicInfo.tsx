@@ -2,6 +2,7 @@
 import React from 'react';
 import { ShowDraft } from '@/types/game';
 import { GENRES, GENRE_PROFILES } from '@/data/genres';
+import { useGameStore } from '@/store/gameStore';
 
 interface Props {
   draft: ShowDraft;
@@ -27,7 +28,14 @@ function epCountStep(max: number) {
   return 5;
 }
 
+function genrePopBadge(pop: number): string {
+  if (pop >= 72) return '🔥';
+  if (pop <= 30) return '📉';
+  return '';
+}
+
 export default function BasicInfo({ draft, onUpdate }: Props) {
+  const genrePopularity = useGameStore(s => s.studio?.genrePopularity ?? {});
   const genreProfile = GENRE_PROFILES[draft.genre];
   const [epMin, epMax] = genreProfile.typicalEpisodeCount;
   const step = epCountStep(epMax);
@@ -81,12 +89,17 @@ export default function BasicInfo({ draft, onUpdate }: Props) {
             <button
               key={g.id}
               onClick={() => handleGenreChange(g.id)}
-              className={`flex flex-col items-center gap-1 p-3 rounded-xl border text-xs font-medium transition-all duration-150 ${
+              className={`relative flex flex-col items-center gap-1 p-3 rounded-xl border text-xs font-medium transition-all duration-150 ${
                 draft.genre === g.id
                   ? 'bg-amber-500/20 border-amber-500 text-amber-300'
                   : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
               }`}
             >
+              {genrePopBadge(genrePopularity[g.id] ?? 50) && (
+                <span className="absolute top-1 right-1.5 text-xs leading-none">
+                  {genrePopBadge(genrePopularity[g.id] ?? 50)}
+                </span>
+              )}
               <span className="text-2xl">{g.emoji}</span>
               <span>{g.label}</span>
             </button>
