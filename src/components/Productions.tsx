@@ -41,13 +41,18 @@ function ActiveProductionCard({ prod }: { prod: ActiveProduction }) {
                 {genre.emoji} {genre.label} · S{prod.seasonNumber} · {network?.logo} {network?.name}
               </p>
             </div>
-            <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${
-              prod.status === 'airing' ? 'bg-green-900/40 text-green-400 border-green-800' :
-              prod.status === 'in-production' ? 'bg-blue-900/40 text-blue-400 border-blue-800' :
-              'bg-amber-900/40 text-amber-400 border-amber-800'
-            }`}>
-              {prod.status === 'in-production' ? `In Production (${prod.productionWeeks}w)` : prod.status}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${
+                prod.status === 'airing' ? 'bg-green-900/40 text-green-400 border-green-800' :
+                prod.status === 'in-production' ? 'bg-blue-900/40 text-blue-400 border-blue-800' :
+                'bg-amber-900/40 text-amber-400 border-amber-800'
+              }`}>
+                {prod.status === 'in-production' ? `In Production (${prod.productionWeeks}w)` : prod.status}
+              </span>
+              {prod.deal.releaseStrategy === 'all-at-once' && (
+                <span className="text-xs bg-emerald-900/40 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">💥 Binge Drop</span>
+              )}
+            </div>
           </div>
 
           {/* Episode progress */}

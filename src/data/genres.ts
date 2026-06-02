@@ -23,7 +23,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [4, 8], locationStyle: [3, 7], setStyle: [5, 9] },
     idealStorytelling: { structure: [5, 10], narrativeDensity: [5, 9], dialogueStyle: [5, 9] },
     baseEpisodeCost: 300000, vfxMultiplier: 0.5,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [8, 13],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [8, 24],
   },
   comedy: {
     id: 'comedy', label: 'Comedy', emoji: '😂', description: 'Laughter, heart, and memorable characters.',
@@ -32,7 +32,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [2, 6], locationStyle: [3, 7], setStyle: [3, 7] },
     idealStorytelling: { structure: [1, 5], narrativeDensity: [1, 5], dialogueStyle: [5, 9] },
     baseEpisodeCost: 150000, vfxMultiplier: 0.2,
-    typicalEpisodeLength: [22, 44], typicalEpisodeCount: [8, 22],
+    typicalEpisodeLength: [22, 44], typicalEpisodeCount: [10, 26],
   },
   crime: {
     id: 'crime', label: 'Crime / Thriller', emoji: '🔍', description: 'Gripping investigations and moral complexity.',
@@ -41,7 +41,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [4, 8], locationStyle: [2, 6], setStyle: [4, 8] },
     idealStorytelling: { structure: [4, 9], narrativeDensity: [5, 9], dialogueStyle: [4, 8] },
     baseEpisodeCost: 280000, vfxMultiplier: 0.4,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [6, 13],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [6, 16],
   },
   'sci-fi': {
     id: 'sci-fi', label: 'Sci-Fi', emoji: '🚀', description: 'Ideas that push humanity beyond its limits.',
@@ -50,7 +50,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [7, 10], locationStyle: [5, 10], setStyle: [6, 10] },
     idealStorytelling: { structure: [4, 10], narrativeDensity: [5, 10], dialogueStyle: [4, 9] },
     baseEpisodeCost: 600000, vfxMultiplier: 2.5,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [8, 13],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [6, 16],
   },
   fantasy: {
     id: 'fantasy', label: 'Fantasy', emoji: '🐉', description: 'Epic worlds, mythic stakes, incredible spectacle.',
@@ -68,7 +68,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [3, 7], locationStyle: [1, 5], setStyle: [2, 6] },
     idealStorytelling: { structure: [1, 4], narrativeDensity: [1, 4], dialogueStyle: [3, 7] },
     baseEpisodeCost: 100000, vfxMultiplier: 0.1,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [8, 20],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [6, 26],
   },
   documentary: {
     id: 'documentary', label: 'Documentary', emoji: '🎬', description: 'Truth told with cinematic power.',
@@ -77,7 +77,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [3, 7], locationStyle: [1, 4], setStyle: [1, 3] },
     idealStorytelling: { structure: [1, 5], narrativeDensity: [3, 7], dialogueStyle: [3, 7] },
     baseEpisodeCost: 80000, vfxMultiplier: 0.3,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [4, 8],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [3, 10],
   },
   horror: {
     id: 'horror', label: 'Horror', emoji: '👻', description: 'Fear, dread, and creatures from beyond.',
@@ -95,7 +95,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [3, 7], locationStyle: [2, 6], setStyle: [4, 7] },
     idealStorytelling: { structure: [1, 4], narrativeDensity: [2, 5], dialogueStyle: [4, 7] },
     baseEpisodeCost: 220000, vfxMultiplier: 0.6,
-    typicalEpisodeLength: [44], typicalEpisodeCount: [13, 22],
+    typicalEpisodeLength: [44], typicalEpisodeCount: [13, 26],
   },
   action: {
     id: 'action', label: 'Action / Adventure', emoji: '💥', description: 'High-octane thrills and spectacular set pieces.',
@@ -104,7 +104,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [7, 10], locationStyle: [3, 8], setStyle: [5, 9] },
     idealStorytelling: { structure: [3, 7], narrativeDensity: [2, 6], dialogueStyle: [2, 6] },
     baseEpisodeCost: 500000, vfxMultiplier: 2.0,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [8, 13],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [8, 16],
   },
   'limited-series': {
     id: 'limited-series', label: 'Limited Series', emoji: '📚', description: 'A complete story in one tight season — prestige television.',
@@ -122,7 +122,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [4, 9], locationStyle: [2, 8], setStyle: [4, 9] },
     idealStorytelling: { structure: [7, 10], narrativeDensity: [5, 10], dialogueStyle: [4, 9] },
     baseEpisodeCost: 380000, vfxMultiplier: 1.0,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [6, 10],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [6, 12],
   },
   'talk-show': {
     id: 'talk-show', label: 'Talk Show', emoji: '🎤', description: 'Celebrity interviews, cultural conversation, and live energy.',
@@ -131,7 +131,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [3, 7], locationStyle: [6, 10], setStyle: [5, 9] },
     idealStorytelling: { structure: [1, 3], narrativeDensity: [1, 3], dialogueStyle: [5, 9] },
     baseEpisodeCost: 60000, vfxMultiplier: 0.05,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [13, 26],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [6, 260],
   },
   'late-night': {
     id: 'late-night', label: 'Late Night', emoji: '🌙', description: 'The couch, the monologue, the moment — late night comedy.',
@@ -140,7 +140,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [3, 6], locationStyle: [7, 10], setStyle: [5, 8] },
     idealStorytelling: { structure: [1, 2], narrativeDensity: [1, 2], dialogueStyle: [7, 10] },
     baseEpisodeCost: 50000, vfxMultiplier: 0.05,
-    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [20, 26],
+    typicalEpisodeLength: [44, 60], typicalEpisodeCount: [26, 260],
   },
   'soap-opera': {
     id: 'soap-opera', label: 'Soap Opera', emoji: '🌹', description: 'Passion, betrayal, and family drama that never ends.',
@@ -149,7 +149,7 @@ export const GENRE_PROFILES: Record<Genre, GenreProfile> = {
     idealWorldLook: { visualStyle: [3, 7], locationStyle: [5, 9], setStyle: [6, 9] },
     idealStorytelling: { structure: [1, 3], narrativeDensity: [4, 8], dialogueStyle: [5, 9] },
     baseEpisodeCost: 120000, vfxMultiplier: 0.2,
-    typicalEpisodeLength: [44], typicalEpisodeCount: [20, 26],
+    typicalEpisodeLength: [44], typicalEpisodeCount: [52, 260],
   },
 };
 

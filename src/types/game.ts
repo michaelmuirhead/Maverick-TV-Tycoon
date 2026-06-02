@@ -121,6 +121,7 @@ export interface NetworkDeal {
   payPerEpisode: number;
   marketingBudget: number;
   seasonNumber: number;
+  releaseStrategy?: 'weekly' | 'all-at-once';
 }
 
 export interface EpisodeResult {
@@ -232,6 +233,7 @@ export interface Network {
     visualStyle?: [number, number];
   };
   dealType: 'per-episode' | 'season-bulk';
+  releaseStrategy?: 'weekly' | 'all-at-once' | 'player-choice';
   maxActiveShows: number;
   country?: string;
 }

@@ -13,6 +13,8 @@ const TYPE_LABELS: Record<string, string> = {
   cable: 'Cable',
   premium: 'Premium Cable',
   streaming: 'Streaming',
+  international: 'International',
+  specialty: 'Specialty',
 };
 
 export default function NetworkHub() {
@@ -21,6 +23,9 @@ export default function NetworkHub() {
   const pitchShow = useGameStore((s) => s.pitchShow);
   const [filter, setFilter] = useState<string>('all');
   const [pitching, setPitching] = useState<string | null>(null);
+  const [releaseStrategies, setReleaseStrategies] = useState<Record<string, 'weekly' | 'all-at-once'>>({});
+
+  const getStrategy = (networkId: string) => releaseStrategies[networkId] ?? 'weekly';
 
   if (!studio?.currentDraft) {
     return (
@@ -43,9 +48,10 @@ export default function NetworkHub() {
   const filtered = filter === 'all' ? NETWORKS : NETWORKS.filter((n) => n.type === filter);
 
   const handlePitch = (networkId: string) => {
+    const strategy = getStrategy(networkId);
     setPitching(networkId);
     setTimeout(() => {
-      pitchShow(networkId);
+      pitchShow(networkId, strategy);
       setPitching(null);
     }, 800);
   };
@@ -123,8 +129,10 @@ export default function NetworkHub() {
           {filtered.map((network) => {
             const fit = calcNetworkFit(draft, network);
             const offer = calcNetworkOffer(quality, fit, network, draft.episodeCount);
+            const isPlayerChoice = network.releaseStrategy === 'player-choice';
+            const strategy = getStrategy(network.id);
             return (
-              <div key={network.id} className={`transition-all duration-300 ${pitching === network.id ? 'scale-95 opacity-70' : ''}`}>
+              <div key={network.id} className={`flex flex-col gap-2 transition-all duration-300 ${pitching === network.id ? 'scale-95 opacity-70' : ''}`}>
                 <NetworkCard
                   network={network}
                   quality={quality}
@@ -132,6 +140,23 @@ export default function NetworkHub() {
                   offer={offer}
                   onPitch={() => handlePitch(network.id)}
                 />
+                {isPlayerChoice && (
+                  <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
+                    {(['weekly', 'all-at-once'] as const).map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setReleaseStrategies(prev => ({ ...prev, [network.id]: s }))}
+                        className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                          strategy === s
+                            ? 'bg-emerald-600 text-white'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        {s === 'weekly' ? '📅 Weekly' : '💥 Binge Drop'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

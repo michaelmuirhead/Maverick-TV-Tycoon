@@ -14,6 +14,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['drama', 'procedural', 'comedy', 'reality'],
     preferredStyle: { tone: [2, 6], humorLevel: [3, 8], realism: [2, 6] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 8,
   },
   {
@@ -28,6 +29,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['drama', 'procedural', 'action', 'comedy'],
     preferredStyle: { tone: [2, 7], humorLevel: [2, 7], realism: [2, 5] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 7,
   },
   {
@@ -42,6 +44,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['comedy', 'reality', 'drama', 'talk-show', 'soap-opera'],
     preferredStyle: { tone: [1, 5], humorLevel: [4, 9], realism: [2, 6] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 10,
   },
   {
@@ -56,6 +59,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['reality', 'action', 'documentary', 'talk-show'],
     preferredStyle: { tone: [3, 7], humorLevel: [3, 7], realism: [2, 5] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 6,
   },
   // CABLE
@@ -71,6 +75,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['drama', 'crime', 'action', 'horror'],
     preferredStyle: { tone: [4, 9], realism: [2, 7], structure: [3, 9] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 5,
   },
   {
@@ -85,6 +90,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['comedy', 'drama', 'reality', 'sci-fi', 'anthology'],
     preferredStyle: { tone: [2, 7], humorLevel: [3, 8] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 5,
   },
   {
@@ -99,6 +105,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['horror', 'crime', 'anthology'],
     preferredStyle: { tone: [7, 10], realism: [2, 8] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 4,
   },
   // PREMIUM CABLE
@@ -114,6 +121,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['drama', 'crime', 'fantasy', 'sci-fi', 'horror', 'limited-series'],
     preferredStyle: { tone: [5, 10], realism: [1, 8], structure: [5, 10], humorLevel: [1, 6] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 4,
   },
   {
@@ -128,6 +136,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['drama', 'crime', 'action', 'limited-series', 'anthology'],
     preferredStyle: { tone: [4, 10], structure: [4, 10] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 4,
   },
   {
@@ -142,6 +151,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['documentary', 'limited-series', 'drama', 'anthology'],
     preferredStyle: { tone: [4, 10], narrativeDensity: [6, 10], structure: [5, 10] },
     dealType: 'per-episode',
+    releaseStrategy: 'weekly',
     maxActiveShows: 3,
   },
   // STREAMING
@@ -157,6 +167,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['drama', 'sci-fi', 'fantasy', 'crime', 'action', 'comedy', 'limited-series'],
     preferredStyle: { structure: [5, 10], narrativeDensity: [4, 10] },
     dealType: 'season-bulk',
+    releaseStrategy: 'player-choice',
     maxActiveShows: 12,
   },
   {
@@ -171,6 +182,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['sci-fi', 'fantasy', 'action', 'documentary', 'drama'],
     preferredStyle: { visualStyle: [5, 10], realism: [4, 10] },
     dealType: 'season-bulk',
+    releaseStrategy: 'player-choice',
     maxActiveShows: 8,
   },
   {
@@ -185,6 +197,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['reality', 'comedy', 'documentary', 'drama', 'horror', 'talk-show'],
     preferredStyle: { humorLevel: [3, 9], tone: [2, 8] },
     dealType: 'season-bulk',
+    releaseStrategy: 'player-choice',
     maxActiveShows: 10,
   },
   // INTERNATIONAL
@@ -200,6 +213,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['drama', 'sci-fi', 'fantasy', 'crime', 'limited-series', 'documentary'],
     preferredStyle: { narrativeDensity: [5, 10], structure: [4, 10] },
     dealType: 'season-bulk',
+    releaseStrategy: 'player-choice',
     maxActiveShows: 10,
     country: 'Global',
   },
@@ -215,6 +229,7 @@ export const NETWORKS: Network[] = [
     preferredGenres: ['drama', 'crime', 'documentary', 'limited-series', 'anthology'],
     preferredStyle: { tone: [5, 10], narrativeDensity: [6, 10], structure: [5, 10] },
     dealType: 'season-bulk',
+    releaseStrategy: 'player-choice',
     maxActiveShows: 6,
     country: 'Europe',
   },
